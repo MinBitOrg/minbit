@@ -1,97 +1,111 @@
 tasks:
-  - id: MB-001
-    title: Make CI green on main (rust, portal, state jobs) and document required checks
-    role: builder
-    status: queued
-    priority: 1
-    milestone: mvp-genesis
-    depends_on: []
-    labels: []
-  - id: MB-002
-    title: "minbit validate: detect dependency cycles and run JSON Schema validation of state/ in CI"
-    role: builder
-    status: queued
-    priority: 1
-    milestone: mvp-genesis
-    depends_on: [MB-001]
-    labels: []
-  - id: MB-003
-    title: "minbit digest: render the daily digest (markdown) from tasks + ledger"
-    role: builder
-    status: queued
-    priority: 2
-    milestone: mvp-genesis
-    depends_on: [MB-001]
-    labels: []
-  - id: MB-004
-    title: Harden auto-merge workflow (never merge needs-human:*, require reviewer approval)
-    role: builder
-    status: queued
-    priority: 1
-    milestone: mvp-genesis
-    depends_on: [MB-001]
-    labels: [needs-human:security]
-  - id: MB-005
-    title: "Reviewer role v1: checklist, review 3 agent PRs, propose prompt improvements"
-    role: reviewer
-    status: queued
-    priority: 2
-    milestone: mvp-genesis
-    depends_on: [MB-001]
-    labels: []
-  - id: MB-006
-    title: "Experiment: can a Claude Code cloud session run codex exec with a ChatGPT Go login? (report only)"
-    role: researcher
-    status: queued
-    priority: 3
-    milestone: mvp-genesis
-    depends_on: []
-    labels: [needs-human:security]
-  - id: MB-007
-    title: "Run ledger: add model + usage-estimate fields and a weekly usage summary"
-    role: builder
-    status: queued
-    priority: 2
-    milestone: mvp-genesis
-    depends_on: [MB-002]
-    labels: [needs-human:schema]
-  - id: MB-008
-    title: "Lifecycle: until-done mode stops itself when all milestone tasks are done"
-    role: builder
-    status: queued
-    priority: 2
-    milestone: mvp-genesis
-    depends_on: [MB-001]
-    labels: []
-  - id: MB-009
-    title: "Portal in monorepo: npm ci, lint and tests green; remove Lovable-specific bits"
-    role: builder
-    status: queued
-    priority: 2
-    milestone: mvp-genesis
-    depends_on: [MB-001]
-    labels: []
-  - id: MB-010
-    title: "Research: shortlist 10 open-source projects worth a Rust rewrite, with licence check (read-only report)"
-    role: researcher
-    status: queued
-    priority: 3
-    milestone: mvp-genesis
-    depends_on: []
-    labels: []
-  - id: MB-011
-    title: "ADR-0005 proposal: orchestration and durable state beyond Phase A"
-    role: planner
-    status: queued
-    priority: 3
-    milestone: mvp-genesis
-    depends_on: [MB-008]
-    labels: []
-  - id: MB-012
-    title: "World model v0: entity model for projects, roadmap, decisions, runs (doc + schema proposal)"
-    role: planner
-    status: queued
-    priority: 3
-    milestone: mvp-genesis
-    depends_on: []
-    labels: [needs-human:schema]
+- id: MB-001
+  title: Make CI green on main (rust, portal, state jobs) and document required checks
+  role: builder
+  status: queued
+  priority: 1
+  milestone: mvp-genesis
+  depends_on: []
+  labels: []
+- id: MB-002
+  title: 'minbit validate: detect dependency cycles and run JSON Schema validation of state/ in CI'
+  role: builder
+  status: queued
+  priority: 1
+  milestone: mvp-genesis
+  depends_on:
+  - MB-001
+  labels: []
+- id: MB-003
+  title: 'minbit digest: render the daily digest (markdown) from tasks + ledger'
+  role: builder
+  status: queued
+  priority: 2
+  milestone: mvp-genesis
+  depends_on:
+  - MB-001
+  labels: []
+- id: MB-004
+  title: Harden auto-merge workflow (never merge needs-human:*, require reviewer approval)
+  role: builder
+  status: in_review
+  priority: 1
+  milestone: mvp-genesis
+  depends_on:
+  - MB-001
+  labels:
+  - needs-human:security
+  claimed_by: session_01HiwMvq1LNb7xiFBpds8BSW
+  pr: https://github.com/MinBitOrg/minbit/pull/14
+- id: MB-005
+  title: 'Reviewer role v1: checklist, review 3 agent PRs, propose prompt improvements'
+  role: reviewer
+  status: queued
+  priority: 2
+  milestone: mvp-genesis
+  depends_on:
+  - MB-001
+  labels: []
+- id: MB-006
+  title: 'Experiment: can a Claude Code cloud session run codex exec with a ChatGPT Go login? (report only)'
+  role: researcher
+  status: queued
+  priority: 3
+  milestone: mvp-genesis
+  depends_on: []
+  labels:
+  - needs-human:security
+- id: MB-007
+  title: 'Run ledger: add model + usage-estimate fields and a weekly usage summary'
+  role: builder
+  status: queued
+  priority: 2
+  milestone: mvp-genesis
+  depends_on:
+  - MB-002
+  labels:
+  - needs-human:schema
+- id: MB-008
+  title: 'Lifecycle: until-done mode stops itself when all milestone tasks are done'
+  role: builder
+  status: queued
+  priority: 2
+  milestone: mvp-genesis
+  depends_on:
+  - MB-001
+  labels: []
+- id: MB-009
+  title: 'Portal in monorepo: npm ci, lint and tests green; remove Lovable-specific bits'
+  role: builder
+  status: queued
+  priority: 2
+  milestone: mvp-genesis
+  depends_on:
+  - MB-001
+  labels: []
+- id: MB-010
+  title: 'Research: shortlist 10 open-source projects worth a Rust rewrite, with licence check (read-only report)'
+  role: researcher
+  status: queued
+  priority: 3
+  milestone: mvp-genesis
+  depends_on: []
+  labels: []
+- id: MB-011
+  title: 'ADR-0005 proposal: orchestration and durable state beyond Phase A'
+  role: planner
+  status: queued
+  priority: 3
+  milestone: mvp-genesis
+  depends_on:
+  - MB-008
+  labels: []
+- id: MB-012
+  title: 'World model v0: entity model for projects, roadmap, decisions, runs (doc + schema proposal)'
+  role: planner
+  status: queued
+  priority: 3
+  milestone: mvp-genesis
+  depends_on: []
+  labels:
+  - needs-human:schema

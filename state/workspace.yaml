@@ -17,9 +17,9 @@ guardrails:
   auto_merge: true
   releases_allowed: false
   escalation_labels:
-    - needs-human:dependency
-    - needs-human:licence
-    - needs-human:security
-    - needs-human:schema
-    - needs-human:spend
-    - needs-human:release
+  - needs-human:dependency
+  - needs-human:licence
+  - needs-human:security
+  - needs-human:schema
+  - needs-human:spend
+  - needs-human:release
