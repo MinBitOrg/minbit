@@ -2,7 +2,7 @@ name: automerge
 
 # Enables GitHub auto-merge (squash) on agent PRs that carry no needs-human:* label.
 # GitHub then merges only after branch protection is satisfied (required checks + review).
-# Hardening is tracked in MB-004.
+# Requires the ruleset in .github/rulesets/main.json (MB-004).
 
 on:
   pull_request_target:
@@ -27,6 +27,14 @@ jobs:
           REPO: ${{ github.repository }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
+          # Safety: without required checks on main, `--auto` merges immediately (PR #13).
+          # Refuse to enable auto-merge unless the default branch has a required-status-checks rule.
+          RULES=$(gh api "repos/$REPO/rules/branches/main" --jq '[.[] | select(.type=="required_status_checks")] | length')
+          if [ "${RULES:-0}" -eq 0 ]; then
+            echo "::error::main has no required status checks (see .github/rulesets/main.json); not enabling auto-merge"
+            gh pr merge "$PR" --repo "$REPO" --disable-auto || true
+            exit 1
+          fi
           if echo "$LABELS" | grep -q 'needs-human:'; then
             echo "Escalation label present: disabling auto-merge"
             gh pr merge "$PR" --repo "$REPO" --disable-auto || true

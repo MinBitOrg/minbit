@@ -19,7 +19,9 @@ The same steps are meant to be reproducible elsewhere; host-specific parts are m
 
 1. Create the GitHub repository `MinBitOrg/minbit` (public) and push this tree.
 2. Settings → General: allow auto-merge, allow squash merge only, delete branches on merge.
-3. Settings → Branches: protect `main` (PR required, status checks `rust`, `portal`, `state` required).
+3. Apply the merge gate (admin): `gh api -X POST repos/MinBitOrg/minbit/rulesets --input .github/rulesets/main.json`.
+   It requires a PR plus the `rust`, `state`, `portal` and `CodeRabbit` checks. Without it, the automerge
+   workflow refuses to run (an earlier PR was merged before CI and review finished).
 4. Install CodeRabbit and enable Copilot code review on the repo.
 5. Run `scripts/sync-labels.sh` and `python3 scripts/seed-issues.py` (needs `gh auth login`; create the `mvp-genesis` milestone first).
 6. *(Claude)* In the "AI workspace" Project, start a Claude Code session on the repo with
