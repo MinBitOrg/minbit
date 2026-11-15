@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MinBitOrg/minbit/state/schema/ledger-entry.schema.json",
+  "title": "MinBit run ledger entry (one JSON object per line in state/ledger/YYYY-MM.jsonl)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ts", "task", "outcome", "summary"],
+  "properties": {
+    "ts": { "type": "string", "format": "date-time" },
+    "task": { "type": "string" },
+    "session": { "type": "string" },
+    "outcome": { "enum": ["pr_opened", "done", "failed", "blocked", "skipped", "rate_limited"] },
+    "summary": { "type": "string", "maxLength": 280 },
+    "pr": { "type": "string" }
+  }
+}

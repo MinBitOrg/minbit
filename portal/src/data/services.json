@@ -1,0 +1,1141 @@
+[
+  {
+    "id": "ollama",
+    "name": "Ollama",
+    "category": "llm-runners",
+    "description": "Get up and running with large language models locally",
+    "longDescription": "Ollama makes it easy to run open-source LLMs on your own hardware. Supports Llama 3, Mistral, Mixtral, and more.",
+    "complexity": "beginner",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "ollama/ollama",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 11434,
+        "host": 11434,
+        "description": "Ollama API"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:11434/api/tags"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "60s"
+    },
+    "volumes": [
+      {
+        "source": "ollama-data",
+        "target": "/root/.ollama",
+        "description": "Model storage and configuration"
+      }
+    ],
+    "internalApiUrl": "http://ollama:11434",
+    "resourceRequirements": {
+      "minRam": "4GB",
+      "recommendedRam": "16GB",
+      "minCpu": 4,
+      "diskSpace": "20GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "OLLAMA_MODELS",
+        "label": "Models to pull on startup",
+        "type": "text",
+        "default": "llama3.2",
+        "description": "Comma-separated list of models to download",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://ollama.ai/docs",
+    "githubRepo": "https://github.com/ollama/ollama",
+    "postDeployInstructions": "### Ollama First Steps\n\n1. **Pull your first model:**\n   ```bash\n   docker exec -it ${PROJECT_NAME}-ollama ollama pull llama3.2\n   ```\n\n2. **Test the model:**\n   ```bash\n   docker exec -it ${PROJECT_NAME}-ollama ollama run llama3.2 \"Hello!\"\n   ```\n\n3. **Verify API is running:**\n   ```bash\n   curl http://localhost:11434/api/tags\n   ```\n\n**Recommended models:**\n- `llama3.2` - Fast, general purpose (4.7GB)\n- `mistral` - Great for coding (4.1GB)\n- `llama3.2:1b` - Lightweight option (1.3GB)\n\n📚 [Browse all models](https://ollama.ai/library)"
+  },
+  {
+    "id": "open-webui",
+    "name": "Open WebUI",
+    "category": "chat-uis",
+    "description": "User-friendly WebUI for LLMs (formerly Ollama WebUI)",
+    "longDescription": "Open WebUI is an extensible, feature-rich, and user-friendly self-hosted WebUI designed to operate entirely offline. It supports various LLM runners including Ollama and OpenAI-compatible APIs.",
+    "complexity": "beginner",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "ghcr.io/open-webui/open-webui",
+    "dockerImageTag": "main",
+    "ports": [
+      {
+        "container": 8080,
+        "host": 3000,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:8080/health"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "30s"
+    },
+    "volumes": [
+      {
+        "source": "webui-data",
+        "target": "/app/backend/data",
+        "description": "User data and settings"
+      }
+    ],
+    "internalApiUrl": "http://open-webui:8080",
+    "resourceRequirements": {
+      "minRam": "2GB",
+      "recommendedRam": "4GB",
+      "minCpu": 2,
+      "diskSpace": "5GB"
+    },
+    "connectsTo": [
+      {
+        "serviceId": "ollama",
+        "envVar": "OLLAMA_BASE_URL"
+      }
+    ],
+    "dependencies": [
+      {
+        "serviceId": "ollama",
+        "required": false,
+        "description": "Recommended LLM backend for local models"
+      }
+    ],
+    "configOptions": [
+      {
+        "key": "WEBUI_AUTH",
+        "label": "Enable authentication",
+        "type": "boolean",
+        "default": true,
+        "description": "Require login to access the UI",
+        "required": false
+      },
+      {
+        "key": "OPENAI_API_BASE",
+        "label": "OpenAI API Base URL",
+        "type": "text",
+        "default": "http://host.docker.internal:11434/v1",
+        "description": "URL for OpenAI-compatible API (e.g., Ollama)",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.openwebui.com",
+    "githubRepo": "https://github.com/open-webui/open-webui",
+    "postDeployInstructions": "### Open WebUI Setup\n\n1. **Open the interface:** http://localhost:3000\n\n2. **Create your admin account** (first user becomes admin)\n\n3. **Configure Ollama connection:**\n   - Go to Settings → Connections\n   - Ollama URL should be: `http://ollama:11434`\n   - Click \"Verify Connection\"\n\n4. **Start chatting!** Select a model from the dropdown and begin.\n\n**Tips:**\n- Enable dark mode in Settings → Interface\n- Import/export conversations via Settings\n- Add custom system prompts per model\n\n📚 [Open WebUI Documentation](https://docs.openwebui.com)"
+  },
+  {
+    "id": "qdrant",
+    "name": "Qdrant",
+    "category": "vector-dbs",
+    "description": "High-performance vector search engine with extended filtering support",
+    "longDescription": "Qdrant is a vector similarity search engine with extended filtering support. It's designed for production-ready services with convenient API and out-of-the-box support for filtering.",
+    "complexity": "intermediate",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "qdrant/qdrant",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 6333,
+        "host": 6333,
+        "description": "HTTP API"
+      },
+      {
+        "container": 6334,
+        "host": 6334,
+        "description": "gRPC API"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:6333/readyz"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3
+    },
+    "volumes": [
+      {
+        "source": "qdrant-data",
+        "target": "/qdrant/storage",
+        "description": "Vector storage"
+      }
+    ],
+    "internalApiUrl": "http://qdrant:6333",
+    "resourceRequirements": {
+      "minRam": "2GB",
+      "recommendedRam": "8GB",
+      "minCpu": 2,
+      "diskSpace": "10GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "QDRANT__SERVICE__API_KEY",
+        "label": "API Key",
+        "type": "text",
+        "default": "",
+        "description": "Optional API key for authentication",
+        "required": false
+      },
+      {
+        "key": "QDRANT__SERVICE__HTTP_PORT",
+        "label": "HTTP Port",
+        "type": "number",
+        "default": 6333,
+        "description": "HTTP API port",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://qdrant.tech/documentation",
+    "githubRepo": "https://github.com/qdrant/qdrant",
+    "postDeployInstructions": "### Qdrant Getting Started\n\n1. **Verify the API is running:**\n   ```bash\n   curl http://localhost:6333/readyz\n   ```\n\n2. **Access the Dashboard:** http://localhost:6333/dashboard\n\n3. **Create your first collection:**\n   ```bash\n   curl -X PUT http://localhost:6333/collections/my_collection \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"vectors\": {\"size\": 384, \"distance\": \"Cosine\"}}'\n   ```\n\n4. **List collections:**\n   ```bash\n   curl http://localhost:6333/collections\n   ```\n\n**Integration URLs:**\n- HTTP API: `http://qdrant:6333` (from Docker)\n- gRPC API: `qdrant:6334`\n\n📚 [Qdrant Documentation](https://qdrant.tech/documentation)"
+  },
+  {
+    "id": "langflow",
+    "name": "LangFlow",
+    "category": "workflow-agents",
+    "description": "Visual framework for building multi-agent and RAG applications",
+    "longDescription": "LangFlow is a low-code app builder for RAG and multi-agent AI applications. It's Python-based and agnostic to models and vector stores, with a visual IDE for drag-and-drop building.",
+    "complexity": "intermediate",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "langflowai/langflow",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 7860,
+        "host": 7860,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:7860/health"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "60s"
+    },
+    "volumes": [
+      {
+        "source": "langflow-data",
+        "target": "/app/langflow",
+        "description": "Flow configurations and data"
+      }
+    ],
+    "internalApiUrl": "http://langflow:7860",
+    "resourceRequirements": {
+      "minRam": "4GB",
+      "recommendedRam": "8GB",
+      "minCpu": 2,
+      "diskSpace": "5GB"
+    },
+    "connectsTo": [
+      {
+        "serviceId": "ollama",
+        "envVar": "OLLAMA_BASE_URL"
+      },
+      {
+        "serviceId": "qdrant",
+        "envVar": "QDRANT_URL"
+      },
+      {
+        "serviceId": "chroma",
+        "envVar": "CHROMA_URL"
+      }
+    ],
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "LANGFLOW_DATABASE_URL",
+        "label": "Database URL",
+        "type": "text",
+        "default": "",
+        "description": "PostgreSQL connection string (optional, defaults to SQLite)",
+        "required": false
+      },
+      {
+        "key": "LANGFLOW_CONFIG_DIR",
+        "label": "Config directory",
+        "type": "text",
+        "default": "/app/langflow",
+        "description": "Directory for configuration files",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.langflow.org",
+    "githubRepo": "https://github.com/langflow-ai/langflow",
+    "postDeployInstructions": "### LangFlow First Steps\n\n1. **Open the interface:** http://localhost:7860\n\n2. **Create a new flow:**\n   - Click \"New Project\"\n   - Drag components from the sidebar\n\n3. **Connect to Ollama:**\n   - Add an \"Ollama\" component\n   - Set Base URL: `http://ollama:11434`\n   - Select your model\n\n4. **Build a simple RAG flow:**\n   - Add: File Loader → Text Splitter → Embeddings → Vector Store → Chat\n   - Connect the components\n   - Click \"Run\"\n\n**Tip:** Export flows as JSON for backup and sharing.\n\n📚 [LangFlow Documentation](https://docs.langflow.org)"
+  },
+  {
+    "id": "n8n",
+    "name": "n8n",
+    "category": "workflow-agents",
+    "description": "Workflow automation tool with 400+ integrations",
+    "longDescription": "n8n is a fair-code licensed workflow automation tool. It allows you to connect anything to everything via its open, fair-code model with 400+ integrations.",
+    "complexity": "intermediate",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "n8nio/n8n",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 5678,
+        "host": 5678,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:5678/healthz"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3
+    },
+    "volumes": [
+      {
+        "source": "n8n-data",
+        "target": "/home/node/.n8n",
+        "description": "Workflows and credentials"
+      }
+    ],
+    "internalApiUrl": "http://n8n:5678",
+    "resourceRequirements": {
+      "minRam": "2GB",
+      "recommendedRam": "4GB",
+      "minCpu": 2,
+      "diskSpace": "5GB"
+    },
+    "connectsTo": [
+      {
+        "serviceId": "ollama",
+        "envVar": "OLLAMA_BASE_URL"
+      }
+    ],
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "N8N_HOST",
+        "label": "Host domain",
+        "type": "text",
+        "default": "localhost",
+        "description": "Domain where n8n is hosted",
+        "required": false
+      },
+      {
+        "key": "N8N_PORT",
+        "label": "Port",
+        "type": "number",
+        "default": 5678,
+        "description": "Port to run n8n on",
+        "required": false
+      },
+      {
+        "key": "N8N_ENCRYPTION_KEY",
+        "label": "Encryption key",
+        "type": "text",
+        "default": "",
+        "description": "Key for encrypting credentials (auto-generated if empty)",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.n8n.io",
+    "githubRepo": "https://github.com/n8n-io/n8n",
+    "postDeployInstructions": "### n8n Setup\n\n1. **Open the editor:** http://localhost:5678\n\n2. **Create your owner account** (first user becomes owner)\n\n3. **Build your first workflow:**\n   - Click \"Add workflow\"\n   - Add a trigger (e.g., Manual, Schedule, Webhook)\n   - Add action nodes\n   - Click \"Execute Workflow\" to test\n\n4. **Add AI capabilities:**\n   - Search for \"Ollama\" in nodes\n   - Configure with URL: `http://ollama:11434`\n   - Use \"Chat Model\" or \"Embeddings\" nodes\n\n**Popular integrations:** Slack, Gmail, Google Sheets, Notion, Airtable\n\n📚 [n8n Documentation](https://docs.n8n.io)"
+  },
+  {
+    "id": "localai",
+    "name": "LocalAI",
+    "category": "llm-runners",
+    "description": "Drop-in replacement REST API compatible with OpenAI",
+    "longDescription": "LocalAI is a drop-in replacement REST API that's compatible with OpenAI API specifications for local inferencing. It allows you to run LLMs, generate images, audio, and more locally or on-premises with consumer-grade hardware.",
+    "complexity": "intermediate",
+    "tags": ["popular", "cpu-only"],
+    "dockerImage": "localai/localai",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 8080,
+        "host": 8080,
+        "description": "OpenAI-compatible API"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:8080/readyz"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "120s"
+    },
+    "volumes": [
+      {
+        "source": "localai-models",
+        "target": "/models",
+        "description": "Model files"
+      }
+    ],
+    "internalApiUrl": "http://localai:8080",
+    "resourceRequirements": {
+      "minRam": "8GB",
+      "recommendedRam": "16GB",
+      "minCpu": 4,
+      "diskSpace": "50GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "MODELS",
+        "label": "Models to preload",
+        "type": "text",
+        "default": "",
+        "description": "Comma-separated list of models to load on startup",
+        "required": false
+      },
+      {
+        "key": "THREADS",
+        "label": "Number of threads",
+        "type": "number",
+        "default": 4,
+        "description": "Number of threads for inference",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://localai.io",
+    "githubRepo": "https://github.com/mudler/LocalAI",
+    "postDeployInstructions": "### LocalAI Setup\n\n1. **Verify API is running:**\n   ```bash\n   curl http://localhost:8080/readyz\n   ```\n\n2. **List available models:**\n   ```bash\n   curl http://localhost:8080/models\n   ```\n\n3. **Install a model from the gallery:**\n   ```bash\n   curl http://localhost:8080/models/apply \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"url\": \"github:mudler/LocalAI/gallery/llama3.yaml\"}'\n   ```\n\n4. **Test with OpenAI-compatible call:**\n   ```bash\n   curl http://localhost:8080/v1/chat/completions \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"model\": \"llama3\", \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]}'\n   ```\n\n**Note:** LocalAI is OpenAI API-compatible, so you can use any OpenAI SDK!\n\n📚 [LocalAI Documentation](https://localai.io)"
+  },
+  {
+    "id": "lm-studio",
+    "name": "LM Studio",
+    "category": "llm-runners",
+    "description": "Desktop application for running LLMs locally with GUI",
+    "longDescription": "LM Studio is a desktop application that makes it easy to run open-source LLMs locally on your machine. Note: LM Studio is primarily a desktop app, not a Docker service. It provides an OpenAI-compatible local server on port 1234.",
+    "complexity": "beginner",
+    "tags": ["popular", "cpu-only"],
+    "dockerImage": "N/A",
+    "dockerImageTag": "N/A",
+    "isExternalService": true,
+    "externalServiceNote": "LM Studio is a desktop application, not a Docker service. Install it from lmstudio.ai and start the local server to expose an OpenAI-compatible API on port 1234.",
+    "ports": [
+      {
+        "container": 1234,
+        "host": 1234,
+        "description": "Local OpenAI-compatible API server"
+      }
+    ],
+    "internalApiUrl": "http://host.docker.internal:1234",
+    "resourceRequirements": {
+      "minRam": "8GB",
+      "recommendedRam": "16GB",
+      "minCpu": 4,
+      "diskSpace": "20GB"
+    },
+    "dependencies": [],
+    "configOptions": [],
+    "environmentVariables": {},
+    "officialDocs": "https://lmstudio.ai/docs",
+    "githubRepo": "https://github.com/lmstudio-ai/lmstudio.js",
+    "postDeployInstructions": "### LM Studio Setup (External Service)\n\n⚠️ **LM Studio is a desktop application**, not a Docker service.\n\n1. **Download LM Studio:** https://lmstudio.ai/\n\n2. **Install and launch** the application\n\n3. **Download a model:**\n   - Go to the \"Discover\" tab\n   - Search for a model (e.g., Llama 3)\n   - Click \"Download\"\n\n4. **Start the local server:**\n   - Go to \"Local Server\" tab\n   - Select your model\n   - Click \"Start Server\"\n   - Server runs on port 1234\n\n5. **Connect from Docker services:**\n   - Use URL: `http://host.docker.internal:1234/v1`\n   - This allows Docker containers to reach your local LM Studio\n\n📚 [LM Studio Docs](https://lmstudio.ai/docs)"
+  },
+  {
+    "id": "vllm",
+    "name": "vLLM",
+    "category": "llm-runners",
+    "description": "High-throughput and memory-efficient inference engine",
+    "longDescription": "vLLM is a fast and easy-to-use library for LLM inference and serving. It features state-of-the-art serving throughput, efficient memory management with PagedAttention, and continuous batching.",
+    "complexity": "advanced",
+    "tags": ["gpu-required", "popular"],
+    "dockerImage": "vllm/vllm-openai",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 8000,
+        "host": 8000,
+        "description": "OpenAI-compatible API"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:8000/health"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "120s"
+    },
+    "volumes": [
+      {
+        "source": "vllm-cache",
+        "target": "/root/.cache/huggingface",
+        "description": "Model cache"
+      }
+    ],
+    "internalApiUrl": "http://vllm:8000",
+    "resourceRequirements": {
+      "minRam": "16GB",
+      "recommendedRam": "32GB",
+      "minCpu": 8,
+      "gpuVram": "24GB",
+      "diskSpace": "100GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "HF_TOKEN",
+        "label": "Hugging Face token",
+        "type": "text",
+        "default": "",
+        "description": "Token for accessing gated models",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.vllm.ai",
+    "githubRepo": "https://github.com/vllm-project/vllm",
+    "postDeployInstructions": "### vLLM Setup (GPU Required)\n\n⚠️ **Requires NVIDIA GPU with CUDA support**\n\n1. **Verify GPU access:**\n   ```bash\n   docker exec -it ${PROJECT_NAME}-vllm nvidia-smi\n   ```\n\n2. **Check server status:**\n   ```bash\n   curl http://localhost:8000/health\n   ```\n\n3. **List loaded models:**\n   ```bash\n   curl http://localhost:8000/v1/models\n   ```\n\n4. **Test inference:**\n   ```bash\n   curl http://localhost:8000/v1/completions \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"model\": \"meta-llama/Llama-3-8B\", \"prompt\": \"Hello\", \"max_tokens\": 50}'\n   ```\n\n**Performance tips:**\n- Use tensor parallelism for multi-GPU setups\n- Enable KV cache quantization for memory savings\n\n📚 [vLLM Documentation](https://docs.vllm.ai)"
+  },
+  {
+    "id": "text-generation-webui",
+    "name": "Text Generation WebUI",
+    "category": "llm-runners",
+    "description": "Gradio web UI for running LLMs like LLaMA, llama.cpp, and more",
+    "longDescription": "A Gradio web UI for running Large Language Models like LLaMA, llama.cpp, GPT-J, Pythia, OPT, and GALACTICA. Its goal is to become the AUTOMATIC1111/stable-diffusion-webui of text generation.",
+    "complexity": "intermediate",
+    "tags": ["popular", "gpu-required"],
+    "dockerImage": "atinoda/text-generation-webui",
+    "dockerImageTag": "default-nvidia",
+    "ports": [
+      {
+        "container": 7860,
+        "host": 7860,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:7860"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "120s"
+    },
+    "volumes": [
+      {
+        "source": "tgwui-models",
+        "target": "/app/models",
+        "description": "Model files"
+      },
+      {
+        "source": "tgwui-loras",
+        "target": "/app/loras",
+        "description": "LoRA adapters"
+      }
+    ],
+    "internalApiUrl": "http://text-generation-webui:7860",
+    "resourceRequirements": {
+      "minRam": "16GB",
+      "recommendedRam": "32GB",
+      "minCpu": 4,
+      "gpuVram": "12GB",
+      "diskSpace": "50GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "EXTRA_LAUNCH_ARGS",
+        "label": "Extra launch arguments",
+        "type": "text",
+        "default": "--listen --verbose",
+        "description": "Additional command-line arguments",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://github.com/oobabooga/text-generation-webui/wiki",
+    "githubRepo": "https://github.com/oobabooga/text-generation-webui",
+    "postDeployInstructions": "### Text Generation WebUI Setup\n\n1. **Open the interface:** http://localhost:7860\n\n2. **Download a model:**\n   - Go to \"Model\" tab → \"Download model\"\n   - Enter a Hugging Face model name (e.g., `TheBloke/Llama-2-7B-GGUF`)\n   - Click \"Download\"\n\n3. **Load the model:**\n   - Select the model from the dropdown\n   - Choose the appropriate loader (llama.cpp for GGUF files)\n   - Click \"Load\"\n\n4. **Start chatting:**\n   - Go to \"Chat\" tab\n   - Select your character/persona\n   - Begin conversation\n\n**Tips:**\n- Use GGUF format for efficient CPU/GPU inference\n- Adjust context length in \"Parameters\" tab\n\n📚 [Text Generation WebUI Wiki](https://github.com/oobabooga/text-generation-webui/wiki)"
+  },
+  {
+    "id": "chatbot-ui",
+    "name": "Chatbot UI",
+    "category": "chat-uis",
+    "description": "Open source ChatGPT UI clone",
+    "longDescription": "Chatbot UI is an open-source AI chat app that allows users to create and deploy customizable AI chatbots. It's designed to be the best UI for interacting with AI models.",
+    "complexity": "beginner",
+    "tags": ["popular", "cpu-only"],
+    "dockerImage": "ghcr.io/mckaywrigley/chatbot-ui",
+    "dockerImageTag": "main",
+    "ports": [
+      {
+        "container": 3000,
+        "host": 3000,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:3000"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "30s"
+    },
+    "volumes": [
+      {
+        "source": "chatbot-ui-data",
+        "target": "/app/data",
+        "description": "Chat history and settings"
+      }
+    ],
+    "internalApiUrl": "http://chatbot-ui:3000",
+    "resourceRequirements": {
+      "minRam": "1GB",
+      "recommendedRam": "2GB",
+      "minCpu": 1,
+      "diskSpace": "2GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "OPENAI_API_KEY",
+        "label": "OpenAI API Key",
+        "type": "text",
+        "default": "",
+        "description": "Your OpenAI API key",
+        "required": true
+      },
+      {
+        "key": "OPENAI_API_HOST",
+        "label": "OpenAI API Host",
+        "type": "text",
+        "default": "https://api.openai.com",
+        "description": "Custom API endpoint (for local models)",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://github.com/mckaywrigley/chatbot-ui",
+    "githubRepo": "https://github.com/mckaywrigley/chatbot-ui",
+    "postDeployInstructions": "### Chatbot UI Setup\n\n1. **Open the interface:** http://localhost:3000\n\n2. **Configure API key:**\n   - Click the settings icon\n   - Enter your OpenAI API key\n   - Or configure a local endpoint\n\n3. **Use with local models:**\n   - Set `OPENAI_API_HOST` to your local API\n   - For Ollama: `http://ollama:11434/v1`\n   - For LocalAI: `http://localai:8080/v1`\n\n4. **Start a conversation:**\n   - Select a model\n   - Type your message\n   - Use `/` commands for quick actions\n\n**Features:** Conversation folders, prompt templates, export/import\n\n📚 [Chatbot UI GitHub](https://github.com/mckaywrigley/chatbot-ui)"
+  },
+  {
+    "id": "librechat",
+    "name": "LibreChat",
+    "category": "chat-uis",
+    "description": "Enhanced ChatGPT clone with multi-modal support",
+    "longDescription": "LibreChat is a free, open-source AI chat platform that allows you to integrate multiple AI models in one interface. It supports OpenAI, Azure OpenAI, BingAI, ChatGPT, Google Vertex AI, Anthropic Claude, and more.",
+    "complexity": "intermediate",
+    "tags": ["popular", "cpu-only"],
+    "dockerImage": "librechat/librechat",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 3000,
+        "host": 3000,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:3000/api/health"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "60s"
+    },
+    "volumes": [
+      {
+        "source": "librechat-data",
+        "target": "/app/data",
+        "description": "User data and uploads"
+      }
+    ],
+    "internalApiUrl": "http://librechat:3000",
+    "resourceRequirements": {
+      "minRam": "2GB",
+      "recommendedRam": "4GB",
+      "minCpu": 2,
+      "diskSpace": "5GB"
+    },
+    "dependencies": [
+      {
+        "serviceId": "mongodb",
+        "required": true,
+        "description": "MongoDB database for storing conversations"
+      }
+    ],
+    "configOptions": [
+      {
+        "key": "MONGO_URI",
+        "label": "MongoDB URI",
+        "type": "text",
+        "default": "mongodb://mongodb:27017/LibreChat",
+        "description": "MongoDB connection string",
+        "required": true
+      },
+      {
+        "key": "PORT",
+        "label": "Port",
+        "type": "number",
+        "default": 3000,
+        "description": "Port to run on",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://www.librechat.ai/docs",
+    "githubRepo": "https://github.com/danny-avila/LibreChat",
+    "postDeployInstructions": "### LibreChat Setup\n\n1. **Open the interface:** http://localhost:3000\n\n2. **Create your account** (registration required)\n\n3. **Configure endpoints:**\n   - Go to Settings → Endpoints\n   - Add your API keys for providers (OpenAI, Anthropic, etc.)\n\n4. **Add local models:**\n   - Configure Ollama endpoint: `http://ollama:11434`\n   - Or LocalAI: `http://localai:8080`\n\n5. **Start chatting:**\n   - Select a provider from the dropdown\n   - Choose a model\n   - Begin your conversation\n\n**Features:** Multi-provider, plugins, file uploads, conversation search\n\n📚 [LibreChat Documentation](https://www.librechat.ai/docs)"
+  },
+  {
+    "id": "flowise",
+    "name": "Flowise",
+    "category": "workflow-agents",
+    "description": "Drag & drop UI to build LLM flows with LangChain",
+    "longDescription": "Flowise is an open-source low-code tool for developers to build customized LLM orchestration flows & AI agents. It's built on top of LangChain and provides a drag-and-drop interface.",
+    "complexity": "beginner",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "flowiseai/flowise",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 3000,
+        "host": 3000,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:3000"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "30s"
+    },
+    "volumes": [
+      {
+        "source": "flowise-data",
+        "target": "/root/.flowise",
+        "description": "Flow configurations and database"
+      }
+    ],
+    "internalApiUrl": "http://flowise:3000",
+    "resourceRequirements": {
+      "minRam": "2GB",
+      "recommendedRam": "4GB",
+      "minCpu": 2,
+      "diskSpace": "5GB"
+    },
+    "connectsTo": [
+      {
+        "serviceId": "ollama",
+        "envVar": "OLLAMA_BASE_URL"
+      },
+      {
+        "serviceId": "qdrant",
+        "envVar": "QDRANT_URL"
+      },
+      {
+        "serviceId": "chroma",
+        "envVar": "CHROMA_URL"
+      }
+    ],
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "PORT",
+        "label": "Port",
+        "type": "number",
+        "default": 3000,
+        "description": "Port to run Flowise on",
+        "required": false
+      },
+      {
+        "key": "DATABASE_PATH",
+        "label": "Database path",
+        "type": "text",
+        "default": "/root/.flowise",
+        "description": "Path for SQLite database",
+        "required": false
+      },
+      {
+        "key": "FLOWISE_USERNAME",
+        "label": "Username",
+        "type": "text",
+        "default": "",
+        "description": "Username for authentication (optional)",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.flowiseai.com",
+    "githubRepo": "https://github.com/FlowiseAI/Flowise",
+    "postDeployInstructions": "### Flowise Setup\n\n1. **Open the interface:** http://localhost:3000\n\n2. **Create your first chatflow:**\n   - Click \"Add New\" → \"Chatflow\"\n   - Drag components from the left sidebar\n\n3. **Build a simple chat:**\n   - Add: Chat Model (Ollama) → LLM Chain → Chat\n   - Configure Ollama URL: `http://ollama:11434`\n   - Connect the nodes\n   - Click \"Save\" then \"Chat\"\n\n4. **Add RAG capabilities:**\n   - Add: Document Loader → Text Splitter → Embeddings → Vector Store\n   - Connect to your vector database (Qdrant/Chroma)\n\n**API Access:** Each chatflow gets a unique API endpoint for integration.\n\n📚 [Flowise Documentation](https://docs.flowiseai.com)"
+  },
+  {
+    "id": "dify",
+    "name": "Dify",
+    "category": "workflow-agents",
+    "description": "LLM app development platform with RAG pipeline",
+    "longDescription": "Dify is an open-source LLM app development platform. It combines Backend-as-a-Service and LLMOps, covering the core tech stack required for building generative AI-native applications.",
+    "complexity": "advanced",
+    "tags": ["popular", "cpu-only"],
+    "dockerImage": "langgenius/dify-web",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 3000,
+        "host": 3000,
+        "description": "Frontend interface"
+      },
+      {
+        "container": 5001,
+        "host": 5001,
+        "description": "Backend API"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:3000"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "90s"
+    },
+    "volumes": [
+      {
+        "source": "dify-data",
+        "target": "/app/api/storage",
+        "description": "Application data and uploads"
+      }
+    ],
+    "internalApiUrl": "http://dify:5001",
+    "resourceRequirements": {
+      "minRam": "8GB",
+      "recommendedRam": "16GB",
+      "minCpu": 4,
+      "diskSpace": "20GB"
+    },
+    "dependencies": [
+      {
+        "serviceId": "postgres",
+        "required": true,
+        "description": "PostgreSQL database for backend"
+      },
+      {
+        "serviceId": "redis",
+        "required": true,
+        "description": "Redis for caching and queuing"
+      }
+    ],
+    "configOptions": [
+      {
+        "key": "CONSOLE_URL",
+        "label": "Console URL",
+        "type": "text",
+        "default": "http://127.0.0.1:5001",
+        "description": "Backend console URL",
+        "required": true
+      },
+      {
+        "key": "APP_URL",
+        "label": "App URL",
+        "type": "text",
+        "default": "http://127.0.0.1:5001",
+        "description": "Application URL",
+        "required": true
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.dify.ai",
+    "githubRepo": "https://github.com/langgenius/dify",
+    "postDeployInstructions": "### Dify Setup\n\n⚠️ **Dify requires PostgreSQL and Redis** - make sure they're running.\n\n1. **Open the interface:** http://localhost:3000\n\n2. **Create admin account:**\n   - Complete the initialization wizard\n   - Set your admin email and password\n\n3. **Configure model providers:**\n   - Go to Settings → Model Providers\n   - Add OpenAI, Anthropic, or local models\n   - For Ollama: Add as OpenAI-compatible with URL `http://ollama:11434/v1`\n\n4. **Create your first app:**\n   - Click \"Create App\"\n   - Choose type: Chatbot, Text Generator, or Agent\n   - Configure prompts and models\n   - Publish and get API access\n\n**Note:** Use docker-compose from [Dify repo](https://github.com/langgenius/dify) for full setup.\n\n📚 [Dify Documentation](https://docs.dify.ai)"
+  },
+  {
+    "id": "chroma",
+    "name": "Chroma",
+    "category": "vector-dbs",
+    "description": "Open-source embedding database for LLM applications",
+    "longDescription": "Chroma is the open-source embedding database. It makes it easy to build LLM apps by making knowledge, facts, and skills pluggable for LLMs.",
+    "complexity": "beginner",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "chromadb/chroma",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 8000,
+        "host": 8000,
+        "description": "HTTP API"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3
+    },
+    "volumes": [
+      {
+        "source": "chroma-data",
+        "target": "/chroma/chroma",
+        "description": "Embedding storage"
+      }
+    ],
+    "internalApiUrl": "http://chroma:8000",
+    "resourceRequirements": {
+      "minRam": "2GB",
+      "recommendedRam": "8GB",
+      "minCpu": 2,
+      "diskSpace": "10GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "IS_PERSISTENT",
+        "label": "Enable persistence",
+        "type": "boolean",
+        "default": true,
+        "description": "Store embeddings to disk",
+        "required": false
+      },
+      {
+        "key": "ANONYMIZED_TELEMETRY",
+        "label": "Anonymous telemetry",
+        "type": "boolean",
+        "default": true,
+        "description": "Send anonymous usage statistics",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.trychroma.com",
+    "githubRepo": "https://github.com/chroma-core/chroma",
+    "postDeployInstructions": "### Chroma Setup\n\n1. **Verify API is running:**\n   ```bash\n   curl http://localhost:8000/api/v1/heartbeat\n   ```\n\n2. **Create a collection:**\n   ```bash\n   curl -X POST http://localhost:8000/api/v1/collections \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"name\": \"my_collection\"}'\n   ```\n\n3. **List collections:**\n   ```bash\n   curl http://localhost:8000/api/v1/collections\n   ```\n\n4. **Use with Python:**\n   ```python\n   import chromadb\n   client = chromadb.HttpClient(host=\"localhost\", port=8000)\n   collection = client.get_or_create_collection(\"my_docs\")\n   ```\n\n**Integration URL:** `http://chroma:8000` (from Docker containers)\n\n📚 [Chroma Documentation](https://docs.trychroma.com)"
+  },
+  {
+    "id": "weaviate",
+    "name": "Weaviate",
+    "category": "vector-dbs",
+    "description": "Cloud-native, modular vector search engine",
+    "longDescription": "Weaviate is an open-source vector database that stores both objects and vectors, allowing for combining vector search with structured filtering. It's cloud-native and offers GraphQL and RESTful APIs.",
+    "complexity": "advanced",
+    "tags": ["popular", "cpu-only"],
+    "dockerImage": "semitechnologies/weaviate",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 8080,
+        "host": 8080,
+        "description": "HTTP API"
+      },
+      {
+        "container": 50051,
+        "host": 50051,
+        "description": "gRPC API"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "30s"
+    },
+    "volumes": [
+      {
+        "source": "weaviate-data",
+        "target": "/var/lib/weaviate",
+        "description": "Vector and object storage"
+      }
+    ],
+    "internalApiUrl": "http://weaviate:8080",
+    "resourceRequirements": {
+      "minRam": "4GB",
+      "recommendedRam": "16GB",
+      "minCpu": 4,
+      "diskSpace": "20GB"
+    },
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED",
+        "label": "Anonymous access",
+        "type": "boolean",
+        "default": true,
+        "description": "Allow unauthenticated access",
+        "required": false
+      },
+      {
+        "key": "PERSISTENCE_DATA_PATH",
+        "label": "Data path",
+        "type": "text",
+        "default": "/var/lib/weaviate",
+        "description": "Path for persistent storage",
+        "required": false
+      },
+      {
+        "key": "QUERY_DEFAULTS_LIMIT",
+        "label": "Default query limit",
+        "type": "number",
+        "default": 25,
+        "description": "Default number of results returned",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://weaviate.io/developers/weaviate",
+    "githubRepo": "https://github.com/weaviate/weaviate",
+    "postDeployInstructions": "### Weaviate Setup\n\n1. **Check readiness:**\n   ```bash\n   curl http://localhost:8080/v1/.well-known/ready\n   ```\n\n2. **View schema:**\n   ```bash\n   curl http://localhost:8080/v1/schema\n   ```\n\n3. **Create a class:**\n   ```bash\n   curl -X POST http://localhost:8080/v1/schema \\\n     -H 'Content-Type: application/json' \\\n     -d '{\n       \"class\": \"Document\",\n       \"vectorizer\": \"none\",\n       \"properties\": [{\"name\": \"content\", \"dataType\": [\"text\"]}]\n     }'\n   ```\n\n4. **Use GraphQL playground:** http://localhost:8080/v1/graphql\n\n**APIs available:**\n- REST: `http://weaviate:8080`\n- GraphQL: `http://weaviate:8080/v1/graphql`\n- gRPC: `weaviate:50051`\n\n📚 [Weaviate Documentation](https://weaviate.io/developers/weaviate)"
+  },
+  {
+    "id": "milvus",
+    "name": "Milvus",
+    "category": "vector-dbs",
+    "description": "Highly scalable vector database for massive embeddings",
+    "longDescription": "Milvus is an open-source vector database built to power embedding similarity search and AI applications. It makes unstructured data search more accessible and provides a consistent user experience.",
+    "complexity": "advanced",
+    "tags": ["popular", "cpu-only"],
+    "dockerImage": "milvusdb/milvus",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 19530,
+        "host": 19530,
+        "description": "gRPC API"
+      },
+      {
+        "container": 9091,
+        "host": 9091,
+        "description": "Metrics port"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:9091/healthz"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "90s"
+    },
+    "volumes": [
+      {
+        "source": "milvus-data",
+        "target": "/var/lib/milvus",
+        "description": "Vector and metadata storage"
+      }
+    ],
+    "internalApiUrl": "http://milvus:19530",
+    "resourceRequirements": {
+      "minRam": "8GB",
+      "recommendedRam": "32GB",
+      "minCpu": 4,
+      "diskSpace": "50GB"
+    },
+    "dependencies": [
+      {
+        "serviceId": "etcd",
+        "required": true,
+        "description": "Metadata storage"
+      },
+      {
+        "serviceId": "minio",
+        "required": true,
+        "description": "Object storage for vector data"
+      }
+    ],
+    "configOptions": [
+      {
+        "key": "MILVUS_HOST",
+        "label": "Host",
+        "type": "text",
+        "default": "localhost",
+        "description": "Milvus server host",
+        "required": false
+      },
+      {
+        "key": "MILVUS_PORT",
+        "label": "Port",
+        "type": "number",
+        "default": 19530,
+        "description": "Milvus server port",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://milvus.io/docs",
+    "githubRepo": "https://github.com/milvus-io/milvus",
+    "postDeployInstructions": "### Milvus Setup\n\n⚠️ **Milvus requires etcd and MinIO** - use the official docker-compose.\n\n1. **Check health:**\n   ```bash\n   curl http://localhost:9091/healthz\n   ```\n\n2. **Use with Python (pymilvus):**\n   ```python\n   from pymilvus import connections, Collection\n   connections.connect(host=\"localhost\", port=\"19530\")\n   ```\n\n3. **Create a collection:**\n   ```python\n   from pymilvus import CollectionSchema, FieldSchema, DataType\n   fields = [\n       FieldSchema(name=\"id\", dtype=DataType.INT64, is_primary=True),\n       FieldSchema(name=\"embedding\", dtype=DataType.FLOAT_VECTOR, dim=384)\n   ]\n   schema = CollectionSchema(fields)\n   collection = Collection(\"my_collection\", schema)\n   ```\n\n**Recommended:** Use [Attu](https://github.com/zilliztech/attu) for GUI management.\n\n📚 [Milvus Documentation](https://milvus.io/docs)"
+  },
+  {
+    "id": "anythingllm",
+    "name": "AnythingLLM",
+    "category": "chat-uis",
+    "description": "All-in-one AI application with built-in RAG and document processing",
+    "longDescription": "AnythingLLM is a full-stack application that transforms any document, resource, or content into a contextualized chatbot. It includes built-in vector database, RAG pipeline, and multi-user support.",
+    "complexity": "beginner",
+    "tags": ["popular", "recommended", "cpu-only"],
+    "dockerImage": "mintplexlabs/anythingllm",
+    "dockerImageTag": "latest",
+    "ports": [
+      {
+        "container": 3001,
+        "host": 3001,
+        "description": "Web interface"
+      }
+    ],
+    "healthCheck": {
+      "test": ["CMD", "curl", "-f", "http://localhost:3001/api/ping"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "startPeriod": "45s"
+    },
+    "volumes": [
+      {
+        "source": "anythingllm-data",
+        "target": "/app/server/storage",
+        "description": "Documents and vector embeddings"
+      }
+    ],
+    "internalApiUrl": "http://anythingllm:3001",
+    "resourceRequirements": {
+      "minRam": "4GB",
+      "recommendedRam": "8GB",
+      "minCpu": 2,
+      "diskSpace": "10GB"
+    },
+    "startupPriority": 2,
+    "connectsTo": [
+      {
+        "serviceId": "ollama",
+        "envVar": "OLLAMA_BASE_PATH"
+      }
+    ],
+    "dependencies": [],
+    "configOptions": [
+      {
+        "key": "STORAGE_DIR",
+        "label": "Storage directory",
+        "type": "text",
+        "default": "/app/server/storage",
+        "description": "Directory for document storage",
+        "required": false
+      },
+      {
+        "key": "LLM_PROVIDER",
+        "label": "LLM Provider",
+        "type": "select",
+        "default": "ollama",
+        "options": ["ollama", "openai", "anthropic"],
+        "description": "Which LLM provider to use",
+        "required": false
+      },
+      {
+        "key": "OLLAMA_BASE_PATH",
+        "label": "Ollama URL",
+        "type": "text",
+        "default": "http://ollama:11434",
+        "description": "URL for Ollama API (if using Ollama)",
+        "required": false
+      }
+    ],
+    "environmentVariables": {},
+    "officialDocs": "https://docs.anythingllm.com",
+    "githubRepo": "https://github.com/Mintplex-Labs/anything-llm",
+    "postDeployInstructions": "### AnythingLLM Getting Started\n\n1. **Open the interface:** http://localhost:3001\n\n2. **Complete initial setup:**\n   - Choose your LLM provider (Ollama recommended for local)\n   - Set Ollama URL: `http://ollama:11434`\n   - Select your embedding model\n\n3. **Create your first workspace:**\n   - Click \"New Workspace\"\n   - Give it a name\n   - Upload documents (PDF, TXT, DOCX, etc.)\n\n4. **Start chatting with your documents!**\n   - Ask questions about your uploaded content\n   - AnythingLLM automatically creates embeddings\n\n**Key features:**\n- Built-in vector database (no external DB needed)\n- Multi-user support with permissions\n- API access for integrations\n\n📚 [AnythingLLM Documentation](https://docs.anythingllm.com)"
+  }
+]

@@ -1,0 +1,25 @@
+version: 1
+name: minbit
+lifecycle:
+  mode: until-done
+  milestone: mvp-genesis
+  reason: Genesis MVP; runs semi-autonomously during maintainer trip 22 Nov - 13 Dec 2026
+  updated_at: 2026-11-15T18:30:00+01:00
+budget:
+  plan: claude-pro
+  heartbeat_interval_hours: 2
+  max_runs_per_day: 8
+  upgrade_trigger: Move to Max when rate limits stop more than 5 heartbeats in a week
+maintainer:
+  review_window: 1-2 h/day, mostly from phone
+  timezone: Europe/Brussels
+guardrails:
+  auto_merge: true
+  releases_allowed: false
+  escalation_labels:
+    - needs-human:dependency
+    - needs-human:licence
+    - needs-human:security
+    - needs-human:schema
+    - needs-human:spend
+    - needs-human:release

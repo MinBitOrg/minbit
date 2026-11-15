@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MinBitOrg/minbit/state/schema/workspace.schema.json",
+  "title": "MinBit workspace state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "lifecycle", "budget", "guardrails"],
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "updated_at"],
+      "properties": {
+        "mode": { "enum": ["always-on", "until-done", "paused", "stopped"] },
+        "milestone": { "type": "string" },
+        "reason": { "type": "string" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan", "heartbeat_interval_hours", "max_runs_per_day"],
+      "properties": {
+        "plan": { "type": "string" },
+        "heartbeat_interval_hours": { "type": "integer", "minimum": 1 },
+        "max_runs_per_day": { "type": "integer", "minimum": 0 },
+        "upgrade_trigger": { "type": "string" }
+      }
+    },
+    "maintainer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "review_window": { "type": "string" },
+        "timezone": { "type": "string" }
+      }
+    },
+    "guardrails": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["auto_merge", "releases_allowed", "escalation_labels"],
+      "properties": {
+        "auto_merge": { "type": "boolean" },
+        "releases_allowed": { "type": "boolean" },
+        "escalation_labels": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^needs-human:[a-z]+$" }
+        }
+      }
+    }
+  }
+}
