@@ -8,6 +8,10 @@ on:
   pull_request_target:
     types: [opened, labeled, unlabeled, synchronize, ready_for_review]
 
+concurrency:
+  group: automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write
@@ -25,8 +29,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
+          if ! LABELS=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name'); then
+            echo "::error::Could not fetch current PR labels; disabling existing auto-merge"
+            gh pr merge "$PR" --repo "$REPO" --disable-auto || true
+            exit 1
+          fi
           # Escalations revoke auto-merge independently of ruleset availability.
           if echo "$LABELS" | grep -q 'needs-human:'; then
             echo "Escalation label present: disabling auto-merge"
