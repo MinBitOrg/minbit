@@ -32,7 +32,7 @@ tasks:
 - id: MB-004
   title: Harden auto-merge workflow (never merge needs-human:*, require reviewer approval)
   role: builder
-  status: in_review
+  status: done
   priority: 1
   milestone: mvp-genesis
   depends_on:
