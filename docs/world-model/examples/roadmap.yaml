@@ -9,4 +9,4 @@ milestones:
   definition_of_done:
   - CI green on main with required checks enforced
   - Heartbeat runs unattended 22 Nov - 13 Dec 2026 with a daily digest
-  - Every task, run and decision is in state/ and validated in CI
+  - Every task is in state/ and validated in CI, every run is derived from the ledger, and every decision has an ADR in docs/adr/

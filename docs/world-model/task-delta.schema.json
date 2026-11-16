@@ -4,7 +4,7 @@
   "title": "Fields ADR-0012 proposes to ADD (optional) to items of state/schema/tasks.schema.json",
   "type": "object",
   "properties": {
-    "project": { "type": "string", "description": "Project id; defaults to the only project" },
+    "project": { "type": "string", "description": "Project id; only needed when the task has no milestone. If both are set it must equal the milestone's project (ADR-0012 rule 3)" },
     "adrs": {
       "type": "array",
       "items": { "type": "string", "pattern": "^ADR-[0-9]{4}$" },

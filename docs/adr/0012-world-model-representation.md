@@ -55,7 +55,10 @@ Workspace 1─* Project 1─* Milestone 1─* Task *─* Decision (ADR)
    (or is checked against the files). A Run is the group of ledger entries sharing a `session`.
 3. **Referential integrity is a CI check** (extends MB-002 `minbit validate`):
    task.milestone ∈ roadmap · milestone.project ∈ projects · task.adrs files exist ·
-   depends_on acyclic and resolvable · ledger.task ∈ tasks.
+   depends_on acyclic and resolvable · ledger.task ∈ tasks ·
+   if both `task.project` and `task.milestone` are set, `task.project` = `milestone.project`.
+   Ownership: a task belongs to its milestone's project; `task.project` is only needed for
+   tasks without a milestone.
 4. **IDs never change and are never reused.** Done/cancelled items stay in the file.
 
 Draft schemas for the two new files and the task delta are in
