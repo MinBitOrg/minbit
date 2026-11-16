@@ -28,7 +28,7 @@ rewrites follow it, so no rewrite task should be queued until the maintainer acc
 
 - Candidates chosen by hand (hypothesis-driven, not exhaustive) for relevance to MinBit's roadmap
   in the kickoff decisions: notifications, environment factory, data product, docs/diagrams, CI.
-- **Validated** metadata: GitHub search API (`gh api search/repositories -f q='repo:<owner>/<name>'`),
+- **Validated** metadata: GitHub search API (`gh api -X GET search/repositories -f q='repo:<owner>/<name>'`),
   run 2026-11-16 ~10:20 UTC. Fields: SPDX licence, primary language, stars, last push, repo size
   (KB). Existing Rust ports found with `search/repositories` queries like `"<name> language:Rust"`
   sorted by stars.
