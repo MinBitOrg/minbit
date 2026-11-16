@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MinBitOrg/minbit/docs/world-model/roadmap.schema.json",
+  "title": "MinBit roadmap (PROPOSAL for state/roadmap.yaml, ADR-0012)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["milestones"],
+  "properties": {
+    "milestones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "project", "title", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "project": { "type": "string" },
+          "title": { "type": "string", "minLength": 5 },
+          "phase": { "type": "string" },
+          "status": { "enum": ["planned", "active", "done", "dropped"] },
+          "target": { "type": "string", "format": "date" },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "definition_of_done": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

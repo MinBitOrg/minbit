@@ -1,0 +1,12 @@
+# Example only — what state/roadmap.yaml would hold today. Later phases need maintainer input.
+milestones:
+- id: mvp-genesis
+  project: minbit
+  title: Genesis MVP — heartbeat ships reviewed PRs on its own
+  phase: A
+  status: active
+  target: 2026-12-14
+  definition_of_done:
+  - CI green on main with required checks enforced
+  - Heartbeat runs unattended 22 Nov - 13 Dec 2026 with a daily digest
+  - Every task, run and decision is in state/ and validated in CI
