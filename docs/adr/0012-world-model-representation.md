@@ -49,13 +49,14 @@ Workspace 1─* Project 1─* Milestone 1─* Task *─* Decision (ADR)
 
 ### Rules
 
-1. **Additive only.** New fields are optional; existing files stay valid. `task.project` defaults to
-   the workspace's only project.
+1. **Additive only.** New fields are optional; existing files stay valid. A task with neither
+   `project` nor `milestone` belongs to `workspace.yaml`'s proposed `default_project` (required
+   once a second project exists; until then, the only project).
 2. **No duplicated facts.** ADR status is read from the ADR file; the README table becomes generated
    (or is checked against the files). A Run is the group of ledger entries sharing a `session`.
 3. **Referential integrity is a CI check** (extends MB-002 `minbit validate`):
    task.milestone ∈ roadmap · milestone.project ∈ projects · task.adrs files exist ·
-   depends_on acyclic and resolvable · ledger.task ∈ tasks ·
+   depends_on acyclic and resolvable · ledger.task ∈ tasks · every set `task.project` ∈ projects ·
    if both `task.project` and `task.milestone` are set, `task.project` = `milestone.project`.
    Ownership: a task belongs to its milestone's project; `task.project` is only needed for
    tasks without a milestone.
