@@ -2,10 +2,21 @@
   "name": "main-merge-gate",
   "target": "branch",
   "enforcement": "active",
-  "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
+      "exclude": []
+    }
+  },
   "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -21,10 +32,22 @@
       "parameters": {
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
-          { "context": "rust" },
-          { "context": "state" },
-          { "context": "portal" },
-          { "context": "CodeRabbit" }
+          {
+            "context": "rust",
+            "integration_id": 15368
+          },
+          {
+            "context": "state",
+            "integration_id": 15368
+          },
+          {
+            "context": "portal",
+            "integration_id": 15368
+          },
+          {
+            "context": "CodeRabbit",
+            "integration_id": 347564
+          }
         ]
       }
     }
