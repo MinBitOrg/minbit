@@ -57,6 +57,7 @@ Workspace 1─* Project 1─* Milestone 1─* Task *─* Decision (ADR)
 3. **Referential integrity is a CI check** (extends MB-002 `minbit validate`):
    task.milestone ∈ roadmap · milestone.project ∈ projects · task.adrs files exist ·
    depends_on acyclic and resolvable · ledger.task ∈ tasks · every set `task.project` ∈ projects ·
+   `workspace.default_project`, when set, ∈ projects ·
    if both `task.project` and `task.milestone` are set, `task.project` = `milestone.project`.
    Ownership: a task belongs to its milestone's project; `task.project` is only needed for
    tasks without a milestone.
