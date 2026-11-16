@@ -8,50 +8,97 @@ on:
   pull_request_target:
     types: [opened, labeled, unlabeled, synchronize, ready_for_review]
 
-concurrency:
-  group: automerge-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
-
 permissions:
   contents: write
   pull-requests: write
+  checks: write
 
 jobs:
+  gate:
+    # Create a separate required check on the PR head (pull_request_target runs
+    # on the base SHA). Do this BEFORE waiting for the per-PR decision lock.
+    # A previous run completes only its own check ID, never this newer gate.
+    runs-on: ubuntu-latest
+    outputs:
+      check-id: ${{ steps.create.outputs.check-id }}
+    steps:
+      - name: Block merging pending the current label decision
+        id: create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          CHECK_ID=$(gh api --method POST "repos/$REPO/check-runs" \
+            -f name=automerge-gate -f head_sha="$HEAD_SHA" \
+            -f status=in_progress --jq .id)
+          echo "check-id=$CHECK_ID" >> "$GITHUB_OUTPUT"
+
   decide:
-    # Only same-repo agent branches; fork PRs never get auto-merge.
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      startsWith(github.head_ref, 'agent/') && !github.event.pull_request.draft
+    needs: gate
+    concurrency:
+      group: automerge-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Enable or disable auto-merge
+        # Other PRs still receive a successful required gate, but cannot enable auto-merge.
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.head_ref, 'agent/') && !github.event.pull_request.draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
+          # Keep the required gate blocked until revocation succeeds. Exhausted
+          # retries fail this job; the finalizer then publishes a failing check.
+          disable_auto() {
+            for attempt in 1 2 3; do
+              if gh pr merge "$PR" --repo "$REPO" --disable-auto; then
+                return 0
+              fi
+              sleep "$((attempt * 2))"
+            done
+            return 1
+          }
           if ! LABELS=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name'); then
             echo "::error::Could not fetch current PR labels; disabling existing auto-merge"
-            gh pr merge "$PR" --repo "$REPO" --disable-auto || true
+            disable_auto
             exit 1
           fi
           # Escalations revoke auto-merge independently of ruleset availability.
-          if echo "$LABELS" | grep -q 'needs-human:'; then
+          if echo "$LABELS" | grep -q '^needs-human:'; then
             echo "Escalation label present: disabling auto-merge"
-            gh pr merge "$PR" --repo "$REPO" --disable-auto || true
+            disable_auto
             exit 0
           fi
 
-          # Safety: without required checks on main, `--auto` merges immediately (PR #13).
-          # Refuse to enable auto-merge unless the default branch has a required-status-checks rule.
-          if ! RULES=$(gh api "repos/$REPO/rules/branches/main" --jq '[.[] | select(.type=="required_status_checks")] | length'); then
+          # Safety: without the required gate on main, `--auto` merges immediately (PR #13).
+          # Refuse to enable auto-merge unless the default branch requires our check from GitHub Actions.
+          if ! RULES=$(gh api "repos/$REPO/rules/branches/main" --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[] | select(.context=="automerge-gate" and .integration_id==15368)] | length'); then
             echo "::error::Could not verify required status checks on main; disabling existing auto-merge"
-            gh pr merge "$PR" --repo "$REPO" --disable-auto || true
+            disable_auto
             exit 1
           fi
           if [ "${RULES:-0}" -eq 0 ]; then
-            echo "::error::main has no required status checks (see .github/rulesets/main.json); not enabling auto-merge"
-            gh pr merge "$PR" --repo "$REPO" --disable-auto || true
+            echo "::error::main does not require automerge-gate from GitHub Actions (see .github/rulesets/main.json); not enabling auto-merge"
+            disable_auto
             exit 1
           fi
           gh pr merge "$PR" --repo "$REPO" --auto --squash
+
+      - name: Complete this run's merge gate
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CHECK_ID: ${{ needs.gate.outputs.check-id }}
+          RESULT: ${{ job.status }}
+        run: |
+          conclusion=failure
+          if [ "$RESULT" = success ]; then
+            conclusion=success
+          fi
+          gh api --method PATCH "repos/$REPO/check-runs/$CHECK_ID" \
+            -f status=completed -f conclusion="$conclusion"
