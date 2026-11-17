@@ -25,6 +25,8 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
+      - name: minbit validate (references, dependency cycles)
+        run: cargo run -q -- validate
 
   state:
     runs-on: ubuntu-latest
@@ -38,15 +40,30 @@ jobs:
         run: |
           check-jsonschema --schemafile state/schema/workspace.schema.json state/workspace.yaml
           check-jsonschema --schemafile state/schema/tasks.schema.json state/tasks.yaml
+          # Ledger: one JSON object per line, each checked against the entry schema.
+          # Split into one file per line so check-jsonschema can validate them.
           shopt -s nullglob
+          out="$RUNNER_TEMP/ledger"
+          mkdir -p "$out"
           for f in state/ledger/*.jsonl; do
-            python - "$f" <<'PY'
-          import json, sys
-          for i, line in enumerate(open(sys.argv[1]), 1):
+            python3 - "$f" "$out" <<'PY'
+          import json, os, sys
+          src, out = sys.argv[1], sys.argv[2]
+          base = os.path.basename(src)
+          for i, line in enumerate(open(src, encoding="utf-8"), 1):
               if line.strip():
-                  json.loads(line)
+                  try:
+                      obj = json.loads(line)
+                  except json.JSONDecodeError as e:
+                      sys.exit(f"{src}:{i}: invalid JSON: {e}")
+                  with open(os.path.join(out, f"{base}.line{i:05d}.json"), "w") as w:
+                      json.dump(obj, w)
           PY
           done
+          entries=("$out"/*.json)
+          if [ ${#entries[@]} -gt 0 ]; then
+            check-jsonschema --schemafile state/schema/ledger-entry.schema.json "${entries[@]}"
+          fi
 
   portal:
     runs-on: ubuntu-latest
