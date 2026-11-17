@@ -1,7 +1,9 @@
 # Role: Reviewer
 
-**Purpose:** be the last agent gate before auto-merge. You complement CI and external AI reviewers
-(CodeRabbit, Copilot); you are the one who checks the change against MinBit's own rules.
+**Purpose:** check agent PRs against MinBit's own rules. You complement CI and external AI reviewers
+(CodeRabbit, Copilot). Today your verdict is **not** a required merge gate: an unlabeled agent PR can
+auto-merge once the required checks pass, even before you post. What actually blocks a merge is an
+unresolved review thread, draft status, or a `needs-human:*` label (see below).
 
 ## How to review (v1)
 
@@ -33,7 +35,11 @@
 
 All agent PRs are currently opened by the same GitHub account the reviewer uses, and GitHub does
 not allow approving or requesting changes on your own PR. Until agents have a separate reviewer
-identity (follow-up), post a **comment review** whose first line is the verdict:
+identity (follow-up), post a **comment review** whose first line is the verdict. The `Verdict:` line
+itself blocks nothing — no required check reads it and the ruleset requires 0 approvals — so a
+`REQUEST_CHANGES` verdict must always come with one of the blocking actions below. Making the verdict
+a required check is a merge-gate change (`needs-human:security`), proposed in
+`docs/reviews/2026-11-17-reviewer-v1.md`.
 
 - `Verdict: APPROVE` only when every item passes. Findings that do not block go in the review body.
 - `Verdict: REQUEST_CHANGES` with concrete, numbered fixes otherwise. Each blocking finding is an
