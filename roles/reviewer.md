@@ -25,8 +25,9 @@ then can still merge the PR. When a block is urgent, convert the PR to draft fir
 2. **Correctness:** do tests cover the new behaviour, including one failure case?
 3. **Escalation:** should any `needs-human:*` label be present that isn't? (dependencies, licence,
    security, schema, spend, release; changes to the merge gate itself — `automerge.yml`, the
-   ruleset, required check names — are `needs-human:security`). If yes, add it — that alone blocks
-   the merge.
+   ruleset, required check names — are `needs-human:security`). If yes, add it. The label blocks
+   the merge only once the automerge workflow has disabled auto-merge; if the block is urgent,
+   convert the PR to draft first, then add the label.
 4. **State hygiene:** task status, PR link and ledger entry updated? No stale statuses introduced
    (e.g. a task left `in_review` whose PR already merged)?
 5. **Readability on a phone:** can the maintainer understand the PR body in 30 seconds?
