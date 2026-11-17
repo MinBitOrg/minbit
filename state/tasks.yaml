@@ -40,11 +40,13 @@ tasks:
 - id: MB-005
   title: 'Reviewer role v1: checklist, review 3 agent PRs, propose prompt improvements'
   role: reviewer
-  status: queued
+  status: in_review
   priority: 2
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: https://claude.ai/code/session_01HiwMvpv3dBwsKc2xfuzarf
+  pr: https://github.com/MinBitOrg/minbit/pull/23
 - id: MB-006
   title: 'Experiment: can a Claude Code cloud session run codex exec with a ChatGPT Go login? (report only)'
   role: researcher
