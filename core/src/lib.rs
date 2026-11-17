@@ -395,6 +395,41 @@ impl State {
         lc.updated_at = now();
     }
 
+    /// Whether the `until-done` goal is reached: the mode is `until-done` and every task in the
+    /// active milestone (or every task, when no milestone is set) is `done` or `cancelled`.
+    /// An empty scope never counts as complete, so a mistyped milestone cannot stop the workspace.
+    pub fn until_done_complete(&self) -> bool {
+        if self.workspace.lifecycle.mode != Mode::UntilDone {
+            return false;
+        }
+        let milestone = self.workspace.lifecycle.milestone.as_deref();
+        let mut scope = self
+            .tasks
+            .tasks
+            .iter()
+            .filter(|t| milestone.is_none() || t.milestone.as_deref() == milestone)
+            .peekable();
+        scope.peek().is_some()
+            && scope.all(|t| matches!(t.status, Status::Done | Status::Cancelled))
+    }
+
+    /// Stop the workspace if [`State::until_done_complete`] holds. Returns `true` when it stopped.
+    /// The caller is responsible for saving.
+    pub fn stop_if_until_done_complete(&mut self) -> bool {
+        if !self.until_done_complete() {
+            return false;
+        }
+        let what = match &self.workspace.lifecycle.milestone {
+            Some(m) => format!("milestone {m}"),
+            None => "all tasks".to_string(),
+        };
+        self.set_mode(
+            Mode::Stopped,
+            Some(format!("until-done: {what} complete (auto-stop)")),
+        );
+        true
+    }
+
     pub fn ledger_path(&self) -> PathBuf {
         let month = Local::now().format("%Y-%m").to_string();
         self.dir.join("ledger").join(format!("{month}.jsonl"))
@@ -624,6 +659,58 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
         s.set_mode(Mode::UntilDone, None);
         s.claim("MB-001", "session-1").unwrap();
         assert!(s.claim("MB-001", "session-2").is_err(), "already claimed");
+    }
+
+    #[test]
+    fn until_done_stops_when_milestone_tasks_are_finished() {
+        let (_tmp, mut s) = fixture();
+        assert!(!s.stop_if_until_done_complete());
+        s.set_status("MB-001", Status::Done, None).unwrap();
+        assert!(!s.until_done_complete(), "MB-002 still queued");
+        s.set_status("MB-002", Status::Cancelled, None).unwrap();
+        // MB-003 is queued but outside milestone m1, so it does not count.
+        assert!(s.stop_if_until_done_complete());
+        assert_eq!(s.workspace.lifecycle.mode, Mode::Stopped);
+        assert_eq!(
+            s.workspace.lifecycle.reason.as_deref(),
+            Some("until-done: milestone m1 complete (auto-stop)")
+        );
+        assert!(s.claim("MB-003", "session-1").is_err());
+        assert!(!s.stop_if_until_done_complete(), "already stopped");
+    }
+
+    #[test]
+    fn until_done_without_milestone_needs_every_task() {
+        let (_tmp, mut s) = fixture();
+        s.workspace.lifecycle.milestone = None;
+        s.set_status("MB-001", Status::Done, None).unwrap();
+        s.set_status("MB-002", Status::Done, None).unwrap();
+        assert!(!s.until_done_complete(), "MB-003 still queued");
+        s.set_status("MB-003", Status::Done, None).unwrap();
+        assert!(s.stop_if_until_done_complete());
+        assert_eq!(
+            s.workspace.lifecycle.reason.as_deref(),
+            Some("until-done: all tasks complete (auto-stop)")
+        );
+    }
+
+    #[test]
+    fn until_done_never_stops_on_empty_scope_or_other_modes() {
+        let (_tmp, mut s) = fixture();
+        s.workspace.lifecycle.milestone = Some("typo".into());
+        assert!(!s.until_done_complete(), "no task in milestone typo");
+        s.workspace.lifecycle.milestone = Some("m1".into());
+        for id in ["MB-001", "MB-002"] {
+            s.set_status(id, Status::Done, None).unwrap();
+        }
+        s.set_mode(Mode::AlwaysOn, None);
+        assert!(
+            !s.stop_if_until_done_complete(),
+            "always-on never auto-stops"
+        );
+        s.set_mode(Mode::Paused, None);
+        assert!(!s.stop_if_until_done_complete(), "paused stays paused");
+        assert_eq!(s.workspace.lifecycle.mode, Mode::Paused);
     }
 
     #[test]

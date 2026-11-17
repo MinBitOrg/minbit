@@ -19,7 +19,8 @@ struct Cli {
 enum Cmd {
     /// Show lifecycle mode, budget and task counts
     Status,
-    /// Print the next task an agent should pick up (exit code 3 if none)
+    /// Print the next task an agent should pick up (exit 3 if none; exit 4 if until-done is
+    /// complete, after stopping the workspace)
     Next {
         #[arg(long)]
         json: bool,
@@ -30,7 +31,7 @@ enum Cmd {
         #[arg(long)]
         session: String,
     },
-    /// Set a task's status
+    /// Set a task's status (stops an until-done workspace once its milestone is finished)
     SetStatus {
         task: String,
         status: StatusArg,
@@ -180,6 +181,14 @@ fn main() -> Result<()> {
                 );
                 std::process::exit(3);
             }
+            if state.stop_if_until_done_complete() {
+                state.save()?;
+                eprintln!(
+                    "{}; workspace stopped — commit state/workspace.yaml, then disable the heartbeat",
+                    state.workspace.lifecycle.reason.as_deref().unwrap_or("until-done complete")
+                );
+                std::process::exit(4);
+            }
             match state.next_task() {
                 Some(t) if json => println!("{}", serde_json::to_string_pretty(t)?),
                 Some(t) => println!("{} [{}] p{} — {}", t.id, t.role, t.priority, t.title),
@@ -196,8 +205,20 @@ fn main() -> Result<()> {
         }
         Cmd::SetStatus { task, status, pr } => {
             state.set_status(&task, status.into(), pr)?;
+            let stopped = state.stop_if_until_done_complete();
             state.save()?;
             println!("{task} updated");
+            if stopped {
+                println!(
+                    "{}; workspace stopped",
+                    state
+                        .workspace
+                        .lifecycle
+                        .reason
+                        .as_deref()
+                        .unwrap_or("until-done complete")
+                );
+            }
         }
         Cmd::Start { mode, reason } => {
             let m = match mode {
