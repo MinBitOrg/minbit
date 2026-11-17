@@ -13,8 +13,7 @@ tasks:
   status: queued
   priority: 1
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
 - id: MB-003
   title: 'minbit digest: render the daily digest (markdown) from tasks + ledger'
@@ -22,8 +21,7 @@ tasks:
   status: queued
   priority: 2
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
 - id: MB-004
   title: Harden auto-merge workflow (never merge needs-human:*, require reviewer approval)
@@ -43,8 +41,7 @@ tasks:
   status: queued
   priority: 2
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
 - id: MB-006
   title: 'Experiment: can a Claude Code cloud session run codex exec with a ChatGPT Go login? (report only)'
@@ -71,8 +68,7 @@ tasks:
   status: queued
   priority: 2
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
 - id: MB-009
   title: 'Portal in monorepo: npm ci, lint and tests green; remove Lovable-specific bits'
