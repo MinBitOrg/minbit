@@ -1,4 +1,5 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
+use chrono::{DateTime, Duration, Local};
 use clap::{Parser, Subcommand, ValueEnum};
 use minbit::{find_state_dir, now, LedgerEntry, Mode, Outcome, State, Status};
 use std::path::PathBuf;
@@ -70,6 +71,12 @@ enum Cmd {
         session: Option<String>,
         #[arg(long)]
         pr: Option<String>,
+    },
+    /// Render the daily digest (Markdown) from tasks + ledger
+    Digest {
+        /// Only ledger entries at or after this RFC 3339 time (default: 24 hours ago)
+        #[arg(long)]
+        since: Option<String>,
     },
     /// Check the state files for structural problems (exit code 1 if any)
     Validate,
@@ -238,6 +245,15 @@ fn main() -> Result<()> {
                 pr,
             })?;
             println!("ledger += {}", path.display());
+        }
+        Cmd::Digest { since } => {
+            let since = match since {
+                Some(s) => DateTime::parse_from_rfc3339(&s)
+                    .with_context(|| format!("--since {s:?} is not RFC 3339"))?,
+                None => (Local::now() - Duration::hours(24)).fixed_offset(),
+            };
+            let ledger = state.read_ledger()?;
+            print!("{}", state.digest(&ledger, since));
         }
         Cmd::Validate => {
             let problems = state.validate();
