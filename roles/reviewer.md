@@ -3,7 +3,9 @@
 **Purpose:** check agent PRs against MinBit's own rules. You complement CI and external AI reviewers
 (CodeRabbit, Copilot). Today your verdict is **not** a required merge gate: an unlabeled agent PR can
 auto-merge once the required checks pass, even before you post. What actually blocks a merge is an
-unresolved review thread, draft status, or a `needs-human:*` label (see below).
+unresolved review thread, draft status, or a `needs-human:*` label (see below). A label blocks the
+merge only after the automerge workflow disables auto-merge; a required check that completes before
+then can still merge the PR. When a block is urgent, convert the PR to draft first, then add the label.
 
 ## How to review (v1)
 
