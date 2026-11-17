@@ -2,11 +2,13 @@ tasks:
 - id: MB-001
   title: Make CI green on main (rust, portal, state jobs) and document required checks
   role: builder
-  status: queued
+  status: in_review
   priority: 1
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: session_01HiwMvrw5wdELPaC9Cjg2WW
+  pr: https://github.com/MinBitOrg/minbit/pull/16
 - id: MB-002
   title: 'minbit validate: detect dependency cycles and run JSON Schema validation of state/ in CI'
   role: builder
@@ -46,12 +48,14 @@ tasks:
 - id: MB-006
   title: 'Experiment: can a Claude Code cloud session run codex exec with a ChatGPT Go login? (report only)'
   role: researcher
-  status: queued
+  status: in_review
   priority: 3
   milestone: mvp-genesis
   depends_on: []
   labels:
   - needs-human:security
+  claimed_by: https://claude.ai/code/session_01HiwMvposK5itynNeXDdiww
+  pr: https://github.com/MinBitOrg/minbit/pull/17
 - id: MB-007
   title: 'Run ledger: add model + usage-estimate fields and a weekly usage summary'
   role: builder
@@ -82,11 +86,13 @@ tasks:
 - id: MB-010
   title: 'Research: shortlist 10 open-source projects worth a Rust rewrite, with licence check (read-only report)'
   role: researcher
-  status: queued
+  status: in_review
   priority: 3
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: https://claude.ai/code/session_01HiwMvqent3McuxjAUwyEky
+  pr: https://github.com/MinBitOrg/minbit/pull/18
 - id: MB-011
   title: 'ADR-0005 proposal: orchestration and durable state beyond Phase A'
   role: planner
@@ -99,9 +105,11 @@ tasks:
 - id: MB-012
   title: 'World model v0: entity model for projects, roadmap, decisions, runs (doc + schema proposal)'
   role: planner
-  status: queued
+  status: in_review
   priority: 3
   milestone: mvp-genesis
   depends_on: []
   labels:
   - needs-human:schema
+  claimed_by: https://claude.ai/code/session_01HiwMvqUiefUU14cXidYyQT
+  pr: https://github.com/MinBitOrg/minbit/pull/19
