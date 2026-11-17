@@ -345,7 +345,10 @@ impl State {
         }
         let mut files: Vec<PathBuf> = fs::read_dir(&dir)
             .with_context(|| format!("reading {}", dir.display()))?
-            .filter_map(|e| e.ok().map(|e| e.path()))
+            .map(|e| e.map(|e| e.path()))
+            .collect::<std::io::Result<Vec<_>>>()
+            .with_context(|| format!("listing {}", dir.display()))?
+            .into_iter()
             .filter(|p| p.extension().is_some_and(|x| x == "jsonl"))
             .collect();
         files.sort();
@@ -381,6 +384,20 @@ impl State {
             }
         };
         let task_line = |t: &Task| format!("- **{}** {}{}", t.id, t.title, link(&t.pr));
+        // Escalation labels as a suffix, e.g. " — `needs-human:schema`", or "" if none.
+        let escalations = |t: &Task| -> String {
+            let esc: Vec<&str> = t
+                .labels
+                .iter()
+                .filter(|l| l.starts_with("needs-human:"))
+                .map(String::as_str)
+                .collect();
+            if esc.is_empty() {
+                String::new()
+            } else {
+                format!(" — `{}`", esc.join("`, `"))
+            }
+        };
         let entry_line = |e: &LedgerEntry| format!("- **{}** {}{}", e.task, e.summary, link(&e.pr));
         let with_status = |s: Status| -> Vec<&Task> {
             self.tasks.tasks.iter().filter(|t| t.status == s).collect()
@@ -416,7 +433,7 @@ impl State {
 
         let mut blocked: Vec<String> = with_status(Status::Blocked)
             .into_iter()
-            .map(task_line)
+            .map(|t| format!("{}{}", task_line(t), escalations(t)))
             .collect();
         blocked.extend(
             recent
@@ -428,18 +445,9 @@ impl State {
 
         let waiting: Vec<String> = with_status(Status::InReview)
             .into_iter()
-            .map(|t| {
-                let esc: Vec<&str> = t
-                    .labels
-                    .iter()
-                    .filter(|l| l.starts_with("needs-human:"))
-                    .map(String::as_str)
-                    .collect();
-                if esc.is_empty() {
-                    format!("{} — review/merge", task_line(t))
-                } else {
-                    format!("{} — `{}`", task_line(t), esc.join("`, `"))
-                }
+            .map(|t| match escalations(t) {
+                e if e.is_empty() => format!("{} — review/merge", task_line(t)),
+                e => format!("{}{e}", task_line(t)),
             })
             .collect();
         section("🙋 Waiting for you", waiting);
@@ -605,6 +613,7 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
         .unwrap();
         s.tasks.tasks[0].labels.push("needs-human:schema".into());
         s.set_status("MB-002", Status::Blocked, None).unwrap();
+        s.tasks.tasks[1].labels.push("needs-human:schema".into());
         let mk = |ts: &str, task: &str, outcome| LedgerEntry {
             ts: ts.into(),
             task: task.into(),
@@ -627,7 +636,10 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
             md.contains("[PR #7](https://github.com/o/r/pull/7) — `needs-human:schema`"),
             "{md}"
         );
-        assert!(md.contains("- **MB-002** urgent but blocked"), "{md}");
+        assert!(
+            md.contains("- **MB-002** urgent but blocked — `needs-human:schema`"),
+            "{md}"
+        );
         assert!(md.contains("### 🔨 In progress\n- _none_"), "{md}");
         assert!(md.contains("2 ledger entries since"), "{md}");
         assert!(md.contains("rate_limited: 1"), "{md}");
