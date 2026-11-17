@@ -200,15 +200,16 @@ impl State {
         })
     }
 
+    /// Write `tasks.yaml`, then `workspace.yaml`. Tasks go first so a failed write can never leave
+    /// a lifecycle change (such as an until-done auto-stop) on disk without the task change that
+    /// caused it; the next `minbit next` simply re-derives the stop.
     pub fn save(&self) -> Result<()> {
-        fs::write(
-            self.dir.join("workspace.yaml"),
-            serde_yaml::to_string(&self.workspace)?,
-        )?;
-        fs::write(
-            self.dir.join("tasks.yaml"),
-            serde_yaml::to_string(&self.tasks)?,
-        )?;
+        let tasks_path = self.dir.join("tasks.yaml");
+        fs::write(&tasks_path, serde_yaml::to_string(&self.tasks)?)
+            .with_context(|| format!("writing {}", tasks_path.display()))?;
+        let ws_path = self.dir.join("workspace.yaml");
+        fs::write(&ws_path, serde_yaml::to_string(&self.workspace)?)
+            .with_context(|| format!("writing {}", ws_path.display()))?;
         Ok(())
     }
 
