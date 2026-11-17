@@ -340,11 +340,14 @@ impl State {
     /// Read every ledger entry under `ledger/*.jsonl`, oldest file first, in file order.
     pub fn read_ledger(&self) -> Result<Vec<LedgerEntry>> {
         let dir = self.dir.join("ledger");
-        if !dir.is_dir() {
-            return Ok(Vec::new());
-        }
-        let mut files: Vec<PathBuf> = fs::read_dir(&dir)
-            .with_context(|| format!("reading {}", dir.display()))?
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            // No ledger yet is a normal empty state; any other error (permissions, not a
+            // directory, ...) must surface instead of rendering an empty digest.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e).with_context(|| format!("reading {}", dir.display())),
+        };
+        let mut files: Vec<PathBuf> = read
             .map(|e| e.map(|e| e.path()))
             .collect::<std::io::Result<Vec<_>>>()
             .with_context(|| format!("listing {}", dir.display()))?
@@ -664,6 +667,19 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
             .map(|e| e.task)
             .collect();
         assert_eq!(tasks, ["A", "B"]);
+    }
+
+    #[test]
+    fn read_ledger_missing_dir_is_empty() {
+        let (_tmp, s) = fixture();
+        assert!(s.read_ledger().unwrap().is_empty());
+    }
+
+    #[test]
+    fn read_ledger_errors_when_ledger_is_not_a_dir() {
+        let (_tmp, s) = fixture();
+        fs::write(s.dir.join("ledger"), "oops").unwrap();
+        assert!(s.read_ledger().is_err());
     }
 
     #[test]
