@@ -1,1 +1,2 @@
 {"ts":"2026-11-16T00:50:57+01:00","task":"MB-004","session":"session_01HiwMvq1LNb7xiFBpds8BSW","outcome":"pr_opened","summary":"Merge gate: ruleset + automerge guard after #13 merged before CI/review. Draft, needs-human:security.","pr":"https://github.com/MinBitOrg/minbit/pull/14"}
+{"ts":"2026-11-18T06:19:52+00:00","task":"plan","session":"session_01HiwMvoR7K6yTpnJsyFsv7v","outcome":"pr_opened","summary":"Planner: every ready task already has an open PR. Queued MB-013..017 from review follow-ups.","pr":"https://github.com/MinBitOrg/minbit/pull/25"}
