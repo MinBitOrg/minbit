@@ -102,6 +102,51 @@ tasks:
   depends_on:
   - MB-008
   labels: []
+- id: MB-013
+  title: 'Heartbeat reconcile: move in_review tasks to done when their PR merged, back to queued when closed unmerged'
+  role: builder
+  status: queued
+  priority: 1
+  milestone: mvp-genesis
+  depends_on: []
+  labels: []
+- id: MB-014
+  title: 'Heartbeat effective queue: skip tasks that already have an open agent PR'
+  role: builder
+  status: queued
+  priority: 2
+  milestone: mvp-genesis
+  depends_on:
+  - MB-013
+  labels: []
+- id: MB-015
+  title: 'Ledger: one file per run so parallel PRs stop conflicting on the monthly jsonl'
+  role: builder
+  status: queued
+  priority: 2
+  milestone: mvp-genesis
+  depends_on:
+  - MB-002
+  labels:
+  - needs-human:schema
+- id: MB-016
+  title: 'State files: write tasks.yaml and workspace.yaml atomically (temp file, then rename)'
+  role: builder
+  status: queued
+  priority: 3
+  milestone: mvp-genesis
+  depends_on:
+  - MB-008
+  labels: []
+- id: MB-017
+  title: Switch the portal CI job to npm test so CI and docs use one command
+  role: builder
+  status: queued
+  priority: 3
+  milestone: mvp-genesis
+  depends_on:
+  - MB-001
+  labels: []
 - id: MB-012
   title: 'World model v0: entity model for projects, roadmap, decisions, runs (doc + schema proposal)'
   role: planner
