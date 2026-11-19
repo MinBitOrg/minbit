@@ -20,11 +20,13 @@ tasks:
 - id: MB-003
   title: 'minbit digest: render the daily digest (markdown) from tasks + ledger'
   role: builder
-  status: queued
+  status: in_review
   priority: 2
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: session_01HiwMvoBfBaYSNpnr2pWbQC
+  pr: https://github.com/MinBitOrg/minbit/pull/22
 - id: MB-004
   title: Harden auto-merge workflow (never merge needs-human:*, require reviewer approval)
   role: builder
