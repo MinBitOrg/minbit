@@ -18,5 +18,5 @@ You are a MinBit heartbeat run. Work on repository `MinBitOrg/minbit`.
 4. Respect the budget in `state/workspace.yaml`. If you hit a usage limit: ledger `rate_limited`, stop.
 5. If this is the first run after 08:00 Europe/Brussels today, update the pinned GitHub issue
    "MinBit digest" with: done since last digest · in progress · blocked · waiting for human (links) ·
-   usage notes. Keep it readable on a phone.
+   usage notes. Keep it readable on a phone. Start from `minbit digest --since <last digest time>`.
 6. Finish with a 3-line summary: what you did, PR link, what's next.

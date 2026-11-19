@@ -167,6 +167,13 @@ pub fn find_state_dir(start: &Path) -> Result<PathBuf> {
     )
 }
 
+/// `https://github.com/o/r/pull/21` -> `21`; anything else is returned unchanged.
+fn pr_number(url: &str) -> &str {
+    url.rsplit_once("/pull/")
+        .map(|(_, n)| n.trim_end_matches('/'))
+        .unwrap_or(url)
+}
+
 pub fn now() -> String {
     Local::now().to_rfc3339_opts(SecondsFormat::Secs, false)
 }
@@ -401,6 +408,147 @@ impl State {
         Ok(path)
     }
 
+    /// Read every ledger entry under `ledger/*.jsonl`, oldest file first, in file order.
+    pub fn read_ledger(&self) -> Result<Vec<LedgerEntry>> {
+        let dir = self.dir.join("ledger");
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            // No ledger yet is a normal empty state; any other error (permissions, not a
+            // directory, ...) must surface instead of rendering an empty digest.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e).with_context(|| format!("reading {}", dir.display())),
+        };
+        let mut files: Vec<PathBuf> = read
+            .map(|e| e.map(|e| e.path()))
+            .collect::<std::io::Result<Vec<_>>>()
+            .with_context(|| format!("listing {}", dir.display()))?
+            .into_iter()
+            .filter(|p| p.extension().is_some_and(|x| x == "jsonl"))
+            .collect();
+        files.sort();
+        let mut entries = Vec::new();
+        for f in files {
+            let content =
+                fs::read_to_string(&f).with_context(|| format!("reading {}", f.display()))?;
+            for (i, line) in content.lines().enumerate() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                let e: LedgerEntry = serde_json::from_str(line)
+                    .with_context(|| format!("{}:{}: invalid ledger entry", f.display(), i + 1))?;
+                entries.push(e);
+            }
+        }
+        Ok(entries)
+    }
+
+    /// Render the daily digest as Markdown: done since `since`, in progress, blocked, waiting for
+    /// the human, and usage notes. Ledger entries whose `ts` does not parse are ignored.
+    pub fn digest(&self, ledger: &[LedgerEntry], since: DateTime<FixedOffset>) -> String {
+        let recent: Vec<&LedgerEntry> = ledger
+            .iter()
+            .filter(|e| {
+                DateTime::<FixedOffset>::parse_from_rfc3339(&e.ts).is_ok_and(|t| t >= since)
+            })
+            .collect();
+        let link = |pr: &Option<String>| -> String {
+            match pr {
+                Some(url) => format!(" · [PR #{}]({url})", pr_number(url)),
+                None => String::new(),
+            }
+        };
+        let task_line = |t: &Task| format!("- **{}** {}{}", t.id, t.title, link(&t.pr));
+        // Escalation labels as a suffix, e.g. " — `needs-human:schema`", or "" if none.
+        let escalations = |t: &Task| -> String {
+            let esc: Vec<&str> = t
+                .labels
+                .iter()
+                .filter(|l| l.starts_with("needs-human:"))
+                .map(String::as_str)
+                .collect();
+            if esc.is_empty() {
+                String::new()
+            } else {
+                format!(" — `{}`", esc.join("`, `"))
+            }
+        };
+        let entry_line = |e: &LedgerEntry| format!("- **{}** {}{}", e.task, e.summary, link(&e.pr));
+        let with_status = |s: Status| -> Vec<&Task> {
+            self.tasks.tasks.iter().filter(|t| t.status == s).collect()
+        };
+        let mut out = String::new();
+        let mut section = |title: &str, lines: Vec<String>| {
+            out.push_str(&format!("### {title}\n"));
+            if lines.is_empty() {
+                out.push_str("- _none_\n");
+            } else {
+                for l in lines {
+                    out.push_str(&l);
+                    out.push('\n');
+                }
+            }
+            out.push('\n');
+        };
+
+        let done: Vec<String> = recent
+            .iter()
+            .filter(|e| matches!(e.outcome, Outcome::Done | Outcome::PrOpened))
+            .map(|e| entry_line(e))
+            .collect();
+        section("✅ Done since last digest", done);
+
+        section(
+            "🔨 In progress",
+            with_status(Status::InProgress)
+                .into_iter()
+                .map(task_line)
+                .collect(),
+        );
+
+        let mut blocked: Vec<String> = with_status(Status::Blocked)
+            .into_iter()
+            .map(|t| format!("{}{}", task_line(t), escalations(t)))
+            .collect();
+        blocked.extend(
+            recent
+                .iter()
+                .filter(|e| matches!(e.outcome, Outcome::Blocked | Outcome::Failed))
+                .map(|e| entry_line(e)),
+        );
+        section("⛔ Blocked", blocked);
+
+        let waiting: Vec<String> = with_status(Status::InReview)
+            .into_iter()
+            .map(|t| match escalations(t) {
+                e if e.is_empty() => format!("{} — review/merge", task_line(t)),
+                e => format!("{}{e}", task_line(t)),
+            })
+            .collect();
+        section("🙋 Waiting for you", waiting);
+
+        let count = |o: Outcome| recent.iter().filter(|e| e.outcome == o).count();
+        let b = &self.workspace.budget;
+        let mut usage = vec![format!(
+            "- {} ledger {} since {} · plan `{}`, max {} runs/day",
+            recent.len(),
+            if recent.len() == 1 {
+                "entry"
+            } else {
+                "entries"
+            },
+            since.format("%Y-%m-%d %H:%M %:z"),
+            b.plan,
+            b.max_runs_per_day
+        )];
+        let limited = count(Outcome::RateLimited);
+        let skipped = count(Outcome::Skipped);
+        if limited > 0 || skipped > 0 {
+            usage.push(format!("- rate_limited: {limited} · skipped: {skipped}"));
+        }
+        section("📊 Usage", usage);
+        out.trim_end().to_string() + "\n"
+    }
+
     /// Counts per status, for `minbit status`.
     pub fn summary(&self) -> Vec<(Status, usize)> {
         let order = [
@@ -569,5 +717,89 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../state");
         let s = State::load(&dir).expect("state/ must parse");
         assert_eq!(s.validate(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn digest_sections_and_since_filter() {
+        let (_tmp, mut s) = fixture();
+        s.set_status(
+            "MB-001",
+            Status::InReview,
+            Some("https://github.com/o/r/pull/7".into()),
+        )
+        .unwrap();
+        s.tasks.tasks[0].labels.push("needs-human:schema".into());
+        s.set_status("MB-002", Status::Blocked, None).unwrap();
+        s.tasks.tasks[1].labels.push("needs-human:schema".into());
+        let mk = |ts: &str, task: &str, outcome| LedgerEntry {
+            ts: ts.into(),
+            task: task.into(),
+            session: None,
+            outcome,
+            summary: format!("{task} summary"),
+            pr: None,
+        };
+        let ledger = vec![
+            mk("2026-11-15T10:00:00+00:00", "OLD", Outcome::Done),
+            mk("2026-11-17T10:00:00+00:00", "MB-001", Outcome::PrOpened),
+            mk("2026-11-17T11:00:00+00:00", "MB-009", Outcome::RateLimited),
+            mk("not a date", "BAD", Outcome::Done),
+        ];
+        let since = DateTime::parse_from_rfc3339("2026-11-16T12:00:00+00:00").unwrap();
+        let md = s.digest(&ledger, since);
+        assert!(md.contains("- **MB-001** MB-001 summary"), "{md}");
+        assert!(!md.contains("OLD") && !md.contains("BAD"), "{md}");
+        assert!(
+            md.contains("[PR #7](https://github.com/o/r/pull/7) — `needs-human:schema`"),
+            "{md}"
+        );
+        assert!(
+            md.contains("- **MB-002** urgent but blocked — `needs-human:schema`"),
+            "{md}"
+        );
+        assert!(md.contains("### 🔨 In progress\n- _none_"), "{md}");
+        assert!(md.contains("2 ledger entries since"), "{md}");
+        assert!(md.contains("rate_limited: 1"), "{md}");
+    }
+
+    #[test]
+    fn read_ledger_reads_all_months_in_order() {
+        let (_tmp, s) = fixture();
+        let dir = s.dir.join("ledger");
+        fs::create_dir_all(&dir).unwrap();
+        let line = |task: &str| {
+            format!(
+                r#"{{"ts":"2026-11-01T00:00:00+00:00","task":"{task}","outcome":"done","summary":"x"}}"#
+            )
+        };
+        fs::write(dir.join("2026-11.jsonl"), line("B") + "\n\n").unwrap();
+        fs::write(dir.join("2026-10.jsonl"), line("A") + "\n").unwrap();
+        let tasks: Vec<String> = s
+            .read_ledger()
+            .unwrap()
+            .into_iter()
+            .map(|e| e.task)
+            .collect();
+        assert_eq!(tasks, ["A", "B"]);
+    }
+
+    #[test]
+    fn read_ledger_missing_dir_is_empty() {
+        let (_tmp, s) = fixture();
+        assert!(s.read_ledger().unwrap().is_empty());
+    }
+
+    #[test]
+    fn read_ledger_errors_when_ledger_is_not_a_dir() {
+        let (_tmp, s) = fixture();
+        fs::write(s.dir.join("ledger"), "oops").unwrap();
+        assert!(s.read_ledger().is_err());
+    }
+
+    #[test]
+    fn pr_number_extracts_trailing_number() {
+        assert_eq!(pr_number("https://github.com/o/r/pull/21"), "21");
+        assert_eq!(pr_number("https://github.com/o/r/pull/21/"), "21");
+        assert_eq!(pr_number("weird"), "weird");
     }
 }

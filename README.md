@@ -36,6 +36,7 @@ Changes carrying a `needs-human:*` label wait for the maintainer.
 cd core && cargo run -- status        # where is the workspace?
 cargo run -- next                     # what should an agent do now?
 cargo run -- pause --reason "trip"    # lifecycle: start | pause | resume | stop
+cargo run -- digest --since 2026-11-17T08:00:00+01:00  # Markdown digest (default: last 24h)
 ```
 
 ## Licence
