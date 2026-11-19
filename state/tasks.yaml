@@ -2,19 +2,20 @@ tasks:
 - id: MB-001
   title: Make CI green on main (rust, portal, state jobs) and document required checks
   role: builder
-  status: queued
+  status: in_review
   priority: 1
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: session_01HiwMvrw5wdELPaC9Cjg2WW
+  pr: https://github.com/MinBitOrg/minbit/pull/16
 - id: MB-002
   title: 'minbit validate: detect dependency cycles and run JSON Schema validation of state/ in CI'
   role: builder
   status: queued
   priority: 1
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
 - id: MB-003
   title: 'minbit digest: render the daily digest (markdown) from tasks + ledger'
@@ -22,8 +23,7 @@ tasks:
   status: queued
   priority: 2
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
 - id: MB-004
   title: Harden auto-merge workflow (never merge needs-human:*, require reviewer approval)
@@ -40,21 +40,24 @@ tasks:
 - id: MB-005
   title: 'Reviewer role v1: checklist, review 3 agent PRs, propose prompt improvements'
   role: reviewer
-  status: queued
+  status: in_review
   priority: 2
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
+  claimed_by: https://claude.ai/code/session_01HiwMvpv3dBwsKc2xfuzarf
+  pr: https://github.com/MinBitOrg/minbit/pull/23
 - id: MB-006
   title: 'Experiment: can a Claude Code cloud session run codex exec with a ChatGPT Go login? (report only)'
   role: researcher
-  status: queued
+  status: in_review
   priority: 3
   milestone: mvp-genesis
   depends_on: []
   labels:
   - needs-human:security
+  claimed_by: https://claude.ai/code/session_01HiwMvposK5itynNeXDdiww
+  pr: https://github.com/MinBitOrg/minbit/pull/17
 - id: MB-007
   title: 'Run ledger: add model + usage-estimate fields and a weekly usage summary'
   role: builder
@@ -71,8 +74,7 @@ tasks:
   status: queued
   priority: 2
   milestone: mvp-genesis
-  depends_on:
-  - MB-001
+  depends_on: []
   labels: []
 - id: MB-009
   title: 'Portal in monorepo: npm ci, lint and tests green; remove Lovable-specific bits'
@@ -150,9 +152,11 @@ tasks:
 - id: MB-012
   title: 'World model v0: entity model for projects, roadmap, decisions, runs (doc + schema proposal)'
   role: planner
-  status: queued
+  status: in_review
   priority: 3
   milestone: mvp-genesis
   depends_on: []
   labels:
   - needs-human:schema
+  claimed_by: https://claude.ai/code/session_01HiwMvqUiefUU14cXidYyQT
+  pr: https://github.com/MinBitOrg/minbit/pull/19
