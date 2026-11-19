@@ -86,11 +86,13 @@ tasks:
 - id: MB-010
   title: 'Research: shortlist 10 open-source projects worth a Rust rewrite, with licence check (read-only report)'
   role: researcher
-  status: queued
+  status: in_review
   priority: 3
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: https://claude.ai/code/session_01HiwMvqent3McuxjAUwyEky
+  pr: https://github.com/MinBitOrg/minbit/pull/18
 - id: MB-011
   title: 'ADR-0005 proposal: orchestration and durable state beyond Phase A'
   role: planner
