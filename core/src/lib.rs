@@ -253,7 +253,78 @@ impl State {
                 }
             }
         }
+        for cycle in self.dependency_cycles() {
+            problems.push(format!("dependency cycle: {}", cycle.join(" -> ")));
+        }
         problems
+    }
+
+    /// Dependency cycles of length ≥ 2 among known tasks (self-dependencies and unknown ids are
+    /// reported separately by [`State::validate`]). Returns an empty list if and only if the graph
+    /// is acyclic; otherwise one entry per back edge found by a depth-first search, as the path of
+    /// ids that closes on its first element, e.g. `["MB-001", "MB-002", "MB-001"]`.
+    pub fn dependency_cycles(&self) -> Vec<Vec<String>> {
+        #[derive(Clone, Copy, PartialEq)]
+        enum Mark {
+            New,
+            OnStack,
+            Finished,
+        }
+        let index: HashMap<&str, usize> = self
+            .tasks
+            .tasks
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (t.id.as_str(), i))
+            .collect();
+        let edges: Vec<Vec<usize>> = self
+            .tasks
+            .tasks
+            .iter()
+            .map(|t| {
+                t.depends_on
+                    .iter()
+                    .filter(|d| *d != &t.id)
+                    .filter_map(|d| index.get(d.as_str()).copied())
+                    .collect()
+            })
+            .collect();
+        let mut mark = vec![Mark::New; edges.len()];
+        let mut cycles = Vec::new();
+        // Iterative DFS: each frame is (node, next edge to visit).
+        for root in 0..edges.len() {
+            if mark[root] != Mark::New {
+                continue;
+            }
+            let mut stack: Vec<(usize, usize)> = vec![(root, 0)];
+            mark[root] = Mark::OnStack;
+            while let Some(frame) = stack.last_mut() {
+                let (node, next) = *frame;
+                if let Some(&dep) = edges[node].get(next) {
+                    frame.1 += 1;
+                    match mark[dep] {
+                        Mark::New => {
+                            mark[dep] = Mark::OnStack;
+                            stack.push((dep, 0));
+                        }
+                        Mark::OnStack => {
+                            let start = stack.iter().position(|(n, _)| *n == dep).unwrap_or(0);
+                            let mut cycle: Vec<String> = stack[start..]
+                                .iter()
+                                .map(|(n, _)| self.tasks.tasks[*n].id.clone())
+                                .collect();
+                            cycle.push(self.tasks.tasks[dep].id.clone());
+                            cycles.push(cycle);
+                        }
+                        Mark::Finished => {}
+                    }
+                } else {
+                    mark[node] = Mark::Finished;
+                    stack.pop();
+                }
+            }
+        }
+        cycles
     }
 
     fn task_mut(&mut self, id: &str) -> Result<&mut Task> {
@@ -576,6 +647,49 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
         s.tasks.tasks[1].labels.push("needs-human:unknown".into());
         let problems = s.validate();
         assert_eq!(problems.len(), 2, "{problems:?}");
+    }
+
+    #[test]
+    fn validate_detects_dependency_cycles() {
+        let (_tmp, mut s) = fixture();
+        assert!(s.dependency_cycles().is_empty());
+        // MB-002 -> MB-001 already exists; close the loop.
+        s.tasks.tasks[0].depends_on.push("MB-002".into());
+        let cycles = s.dependency_cycles();
+        assert_eq!(cycles.len(), 1, "{cycles:?}");
+        let cycle = &cycles[0];
+        assert_eq!(cycle.first(), cycle.last());
+        assert_eq!(cycle.len(), 3, "{cycle:?}");
+        let problems = s.validate();
+        assert!(
+            problems.iter().any(|p| p.starts_with("dependency cycle: ")),
+            "{problems:?}"
+        );
+        // A cycled task is never selectable.
+        assert!(s.next_task().is_none());
+    }
+
+    #[test]
+    fn longer_cycle_is_found_and_self_loop_is_not_double_reported() {
+        let (_tmp, mut s) = fixture();
+        s.tasks.tasks[2].depends_on.push("MB-002".into()); // 3 -> 2 -> 1
+        s.tasks.tasks[0].depends_on.push("MB-003".into()); // 1 -> 3
+        let cycles = s.dependency_cycles();
+        assert_eq!(cycles.len(), 1, "{cycles:?}");
+        assert_eq!(cycles[0].len(), 4, "{cycles:?}");
+
+        let (_tmp2, mut s2) = fixture();
+        s2.tasks.tasks[0].depends_on.push("MB-001".into());
+        assert!(s2.dependency_cycles().is_empty());
+        assert_eq!(s2.validate(), vec!["MB-001 depends on itself".to_string()]);
+    }
+
+    #[test]
+    fn diamond_is_not_a_cycle() {
+        let (_tmp, mut s) = fixture();
+        s.tasks.tasks[2].depends_on = vec!["MB-001".into(), "MB-002".into()];
+        assert!(s.dependency_cycles().is_empty());
+        assert!(s.validate().is_empty());
     }
 
     #[test]

@@ -12,11 +12,13 @@ tasks:
 - id: MB-002
   title: 'minbit validate: detect dependency cycles and run JSON Schema validation of state/ in CI'
   role: builder
-  status: queued
+  status: in_review
   priority: 1
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: session_01HiwMvqYC1e7yBhiVXMfDGT
+  pr: https://github.com/MinBitOrg/minbit/pull/21
 - id: MB-003
   title: 'minbit digest: render the daily digest (markdown) from tasks + ledger'
   role: builder
