@@ -174,6 +174,42 @@ fn pr_number(url: &str) -> &str {
         .unwrap_or(url)
 }
 
+/// Whether two PR URLs point at the same pull request (ignores a trailing slash and case).
+fn same_pr(a: &str, b: &str) -> bool {
+    a.trim_end_matches('/')
+        .eq_ignore_ascii_case(b.trim_end_matches('/'))
+}
+
+/// The fields of a GitHub REST pull-request object that [`State::reconcile`] needs. Extra fields
+/// are ignored, so the output of `gh api repos/{owner}/{repo}/pulls?state=all` parses as-is.
+#[derive(Debug, Clone, Deserialize)]
+pub struct PrInfo {
+    pub html_url: String,
+    /// `open` or `closed`.
+    pub state: String,
+    /// Set when the PR was merged.
+    #[serde(default)]
+    pub merged_at: Option<String>,
+}
+
+/// Parse PR objects from JSON: one array, or several arrays back to back (what
+/// `gh api --paginate` prints).
+pub fn parse_prs(json: &str) -> Result<Vec<PrInfo>> {
+    let mut prs = Vec::new();
+    for page in serde_json::Deserializer::from_str(json).into_iter::<Vec<PrInfo>>() {
+        prs.extend(page.context("parsing pull-request JSON (expected arrays of PR objects)")?);
+    }
+    Ok(prs)
+}
+
+/// One task status change made by [`State::reconcile`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reconciled {
+    pub task: String,
+    pub to: Status,
+    pub pr: String,
+}
+
 pub fn now() -> String {
     Local::now().to_rfc3339_opts(SecondsFormat::Secs, false)
 }
@@ -385,6 +421,39 @@ impl State {
             t.pr = pr;
         }
         Ok(())
+    }
+
+    /// Bring `in_review` tasks in line with their pull requests: merged → `done`; closed without
+    /// merging → back to `queued` (claim and PR link cleared). Open PRs, tasks without a PR link and
+    /// PRs missing from `prs` are left alone. Returns one change per task touched, in task order.
+    /// The caller is responsible for saving.
+    pub fn reconcile(&mut self, prs: &[PrInfo]) -> Vec<Reconciled> {
+        let mut changes = Vec::new();
+        for t in &mut self.tasks.tasks {
+            if t.status != Status::InReview {
+                continue;
+            }
+            let Some(url) = t.pr.clone() else { continue };
+            let Some(pr) = prs.iter().find(|p| same_pr(&p.html_url, &url)) else {
+                continue;
+            };
+            let to = if pr.merged_at.is_some() {
+                Status::Done
+            } else if pr.state == "closed" {
+                t.claimed_by = None;
+                t.pr = None;
+                Status::Queued
+            } else {
+                continue;
+            };
+            t.status = to;
+            changes.push(Reconciled {
+                task: t.id.clone(),
+                to,
+                pr: url,
+            });
+        }
+        changes
     }
 
     pub fn set_mode(&mut self, mode: Mode, reason: Option<String>) {
@@ -650,6 +719,56 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
             s.next_task().is_none(),
             "MB-003 is outside the active milestone"
         );
+    }
+
+    #[test]
+    fn reconcile_follows_pr_state() {
+        let (_tmp, mut s) = fixture();
+        let url = |n: u32| format!("https://github.com/o/r/pull/{n}");
+        s.claim("MB-001", "sess-1").unwrap();
+        s.set_status("MB-001", Status::InReview, Some(url(1)))
+            .unwrap();
+        s.set_status("MB-002", Status::InReview, Some(url(2)))
+            .unwrap();
+        s.tasks.tasks[1].claimed_by = Some("sess-2".into());
+        s.set_status("MB-003", Status::InReview, Some(url(3)))
+            .unwrap();
+        // `gh api --paginate` output: two arrays back to back, with extra fields.
+        let json = format!(
+            r#"[{{"number":1,"html_url":"{}/","state":"closed","merged_at":"2026-11-19T10:00:00Z"}},
+                {{"html_url":"{}","state":"closed","merged_at":null}}]
+               [{{"html_url":"{}","state":"open"}}]"#,
+            url(1),
+            url(2),
+            url(3)
+        );
+        let prs = parse_prs(&json).unwrap();
+        assert_eq!(prs.len(), 3);
+
+        let changes = s.reconcile(&prs);
+        assert_eq!(
+            changes,
+            vec![
+                Reconciled {
+                    task: "MB-001".into(),
+                    to: Status::Done,
+                    pr: url(1)
+                },
+                Reconciled {
+                    task: "MB-002".into(),
+                    to: Status::Queued,
+                    pr: url(2)
+                },
+            ]
+        );
+        let t = |id: &str| s.tasks.tasks.iter().find(|t| t.id == id).unwrap().clone();
+        assert_eq!(t("MB-001").pr, Some(url(1)), "merged keeps its PR link");
+        assert_eq!(t("MB-002").status, Status::Queued);
+        assert_eq!(t("MB-002").pr, None);
+        assert_eq!(t("MB-002").claimed_by, None);
+        assert_eq!(t("MB-003").status, Status::InReview, "open PR untouched");
+        assert!(s.reconcile(&prs).is_empty(), "idempotent");
+        assert!(parse_prs("{\"not\":\"an array\"}").is_err());
     }
 
     #[test]
