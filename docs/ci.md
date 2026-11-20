@@ -10,7 +10,7 @@ of truth; an admin applies it, see [genesis step 3](../genesis/README.md#steps))
 |---|---|---|---|
 | `rust` | [`ci.yml`](../.github/workflows/ci.yml) (GitHub Actions) | `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` | same commands in `core/` |
 | `state` | `ci.yml` | `check-jsonschema` of `state/workspace.yaml` and `state/tasks.yaml` against `state/schema/`; every `state/ledger/*.jsonl` line parses as JSON | `pip install check-jsonschema`, then the commands in the `state` job |
-| `portal` | `ci.yml` | `npm ci`, `npx vitest run`, `npm run build` | `npm ci && npm test && npm run build` in `portal/` |
+| `portal` | `ci.yml` | `npm ci`, `npm run lint`, `npx vitest run`, `npm run build` | `npm ci && npm run lint && npm test && npm run build` in `portal/` |
 | `CodeRabbit` | CodeRabbit app | AI review must complete | — |
 | `automerge-gate` | [`automerge.yml`](../.github/workflows/automerge.yml) | Passes once the label decision for the current head is made; blocks merging while it is pending | — |
 

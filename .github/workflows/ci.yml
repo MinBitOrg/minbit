@@ -78,5 +78,6 @@ jobs:
           cache: npm
           cache-dependency-path: portal/package-lock.json
       - run: npm ci
+      - run: npm run lint
       - run: npx vitest run
       - run: npm run build
