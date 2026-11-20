@@ -65,7 +65,7 @@ tasks:
 - id: MB-007
   title: 'Run ledger: add model + usage-estimate fields and a weekly usage summary'
   role: builder
-  status: in_progress
+  status: in_review
   priority: 2
   milestone: mvp-genesis
   depends_on:
@@ -73,6 +73,7 @@ tasks:
   labels:
   - needs-human:schema
   claimed_by: https://claude.ai/code/session_01HiwMvotfWd22t7cBfqSjHh
+  pr: https://github.com/MinBitOrg/minbit/pull/29
 - id: MB-008
   title: 'Lifecycle: until-done mode stops itself when all milestone tasks are done'
   role: builder
