@@ -75,11 +75,13 @@ tasks:
 - id: MB-008
   title: 'Lifecycle: until-done mode stops itself when all milestone tasks are done'
   role: builder
-  status: queued
+  status: in_review
   priority: 2
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: https://claude.ai/code/session_01HiwMvs1NAmirVs61pjmuUz
+  pr: https://github.com/MinBitOrg/minbit/pull/24
 - id: MB-009
   title: 'Portal in monorepo: npm ci, lint and tests green; remove Lovable-specific bits'
   role: builder
