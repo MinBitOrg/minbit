@@ -17,7 +17,7 @@ Agents may only create `proposed` ADRs; the maintainer accepts them.
 | 0009 | Observability | accepted (Phase A) |
 | 0010 | Human-in-the-loop policy | accepted |
 | 0011 | Secrets and identity | open |
-| 0012 | World model representation | open (MB-012) |
+| 0012 | [World model representation](0012-world-model-representation.md) | proposed (MB-012) |
 | 0013 | Licensing policy for rewrites and reverse engineering | open |
 | 0014 | Project licence: AGPL-3.0-or-later | accepted |
 | 0015 | Portal backend and AI gateway | open |

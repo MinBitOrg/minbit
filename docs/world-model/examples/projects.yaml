@@ -1,0 +1,14 @@
+# Example only — what state/projects.yaml would hold today.
+projects:
+- id: minbit
+  name: MinBit Workspace
+  repo: MinBitOrg/minbit
+  status: active
+  licence: AGPL-3.0-or-later
+  summary: The workspace builds itself (genesis).
+- id: minbit-portal
+  name: MinBit Portal
+  repo: MinBitOrg/minbit
+  path: portal
+  status: active
+  licence: AGPL-3.0-or-later

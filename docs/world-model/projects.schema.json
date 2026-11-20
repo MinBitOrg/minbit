@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MinBitOrg/minbit/docs/world-model/projects.schema.json",
+  "title": "MinBit projects (PROPOSAL for state/projects.yaml, ADR-0012)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projects"],
+  "properties": {
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "repo": { "type": "string" },
+          "path": { "type": "string", "description": "Subdirectory in the monorepo, if any" },
+          "status": { "enum": ["idea", "active", "paused", "archived"] },
+          "licence": { "type": "string" },
+          "summary": { "type": "string", "maxLength": 280 }
+        }
+      }
+    }
+  }
+}
