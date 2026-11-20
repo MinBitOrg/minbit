@@ -332,7 +332,10 @@ fn main() -> Result<()> {
                     if days <= 0 {
                         bail!("--days must be positive");
                     }
-                    (Local::now() - Duration::days(days)).fixed_offset()
+                    Duration::try_days(days)
+                        .and_then(|d| Local::now().checked_sub_signed(d))
+                        .context("--days is out of range")?
+                        .fixed_offset()
                 }
             };
             let ledger = state.read_ledger()?;
