@@ -19,8 +19,9 @@ start of every session. It overrides your defaults; the maintainer's explicit in
 4. **Verify** locally: `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` in `core/`;
    `npm ci && npm test && npm run build` in `portal/` when you touched it. Required checks: [docs/ci.md](docs/ci.md).
 5. **PR** using the template; link the task id; fill the escalation checklist honestly.
-6. **Record**: `cargo run -q -- ledger --task <id> --outcome <pr_opened|done|failed|blocked> --summary "<one line>"`
-   and commit the ledger update on the same branch.
+6. **Record**: `cargo run -q -- ledger --task <id> --outcome <pr_opened|done|failed|blocked> --summary "<one line>"
+   --model <model id> --usage-estimate <low|medium|high>` (low = orientation/skip, medium = normal task,
+   high = long run), and commit the ledger update on the same branch. Weekly view: `cargo run -q -- usage`.
 7. **Stop** when the task is done or you are blocked. Never start a second task in the same session
    unless the heartbeat prompt says so.
 
