@@ -1,7 +1,9 @@
 use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Duration, Local};
 use clap::{Parser, Subcommand, ValueEnum};
-use minbit::{find_state_dir, now, parse_prs, LedgerEntry, Mode, Outcome, State, Status};
+use minbit::{
+    find_state_dir, now, parse_prs, LedgerEntry, Mode, Outcome, State, Status, UsageEstimate,
+};
 use std::io::Read;
 use std::path::PathBuf;
 
@@ -73,6 +75,21 @@ enum Cmd {
         session: Option<String>,
         #[arg(long)]
         pr: Option<String>,
+        /// Model that did the run (e.g. claude-opus-5-5)
+        #[arg(long)]
+        model: Option<String>,
+        /// Rough size of the run: low (orientation/skip), medium (normal task), high (long run)
+        #[arg(long, value_enum)]
+        usage_estimate: Option<UsageArg>,
+    },
+    /// Summarise usage from the ledger (default: the last 7 days)
+    Usage {
+        /// Only ledger entries at or after this RFC 3339 time (overrides --days)
+        #[arg(long)]
+        since: Option<String>,
+        /// Window length in days, ending now
+        #[arg(long, default_value_t = 7)]
+        days: i64,
     },
     /// Render the daily digest (Markdown) from tasks + ledger
     Digest {
@@ -142,6 +159,23 @@ impl From<OutcomeArg> for Outcome {
             OutcomeArg::Blocked => Outcome::Blocked,
             OutcomeArg::Skipped => Outcome::Skipped,
             OutcomeArg::RateLimited => Outcome::RateLimited,
+        }
+    }
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum UsageArg {
+    Low,
+    Medium,
+    High,
+}
+
+impl From<UsageArg> for UsageEstimate {
+    fn from(u: UsageArg) -> Self {
+        match u {
+            UsageArg::Low => UsageEstimate::Low,
+            UsageArg::Medium => UsageEstimate::Medium,
+            UsageArg::High => UsageEstimate::High,
         }
     }
 }
@@ -264,6 +298,8 @@ fn main() -> Result<()> {
             summary,
             session,
             pr,
+            model,
+            usage_estimate,
         } => {
             if summary.chars().count() > 280 {
                 bail!("summary longer than 280 characters");
@@ -275,6 +311,8 @@ fn main() -> Result<()> {
                 outcome: outcome.into(),
                 summary,
                 pr,
+                model,
+                usage_estimate: usage_estimate.map(Into::into),
             })?;
             println!("ledger += {}", path.display());
         }
@@ -286,6 +324,20 @@ fn main() -> Result<()> {
             };
             let ledger = state.read_ledger()?;
             print!("{}", state.digest(&ledger, since));
+        }
+        Cmd::Usage { since, days } => {
+            let since = match since {
+                Some(s) => DateTime::parse_from_rfc3339(&s)
+                    .with_context(|| format!("--since {s:?} is not RFC 3339"))?,
+                None => {
+                    if days <= 0 {
+                        bail!("--days must be positive");
+                    }
+                    (Local::now() - Duration::days(days)).fixed_offset()
+                }
+            };
+            let ledger = state.read_ledger()?;
+            print!("{}", state.usage_summary(&ledger, since));
         }
         Cmd::Reconcile { prs, dry_run } => {
             let json = if prs == "-" {
