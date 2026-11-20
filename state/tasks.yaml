@@ -85,13 +85,14 @@ tasks:
 - id: MB-009
   title: 'Portal in monorepo: npm ci, lint and tests green; remove Lovable-specific bits'
   role: builder
-  status: in_progress
+  status: in_review
   priority: 2
   milestone: mvp-genesis
   depends_on:
   - MB-001
   labels: []
   claimed_by: https://claude.ai/code/session_01HiwMvqN9mavjsMghTehuPM
+  pr: https://github.com/MinBitOrg/minbit/pull/30
 - id: MB-010
   title: 'Research: shortlist 10 open-source projects worth a Rust rewrite, with licence check (read-only report)'
   role: researcher
