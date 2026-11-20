@@ -7,7 +7,7 @@
 use anyhow::{bail, Context, Result};
 use chrono::{DateTime, FixedOffset, Local, SecondsFormat};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -132,6 +132,19 @@ pub enum Outcome {
     RateLimited,
 }
 
+/// Rough size of a run. Subscription plans do not expose token counts (ADR-0016), so runs
+/// self-report a coarse bucket instead of a number.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UsageEstimate {
+    /// Orientation only: status, a skip, a quick check.
+    Low,
+    /// A normal task: read some files, write a focused change, run the checks.
+    Medium,
+    /// Long or wide run: many files, repeated build/test cycles, several PRs touched.
+    High,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LedgerEntry {
@@ -143,6 +156,25 @@ pub struct LedgerEntry {
     pub summary: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pr: Option<String>,
+    /// Model that did the run, as the session reports it (e.g. `claude-opus-5-5`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// Self-reported size of the run.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage_estimate: Option<UsageEstimate>,
+}
+
+impl LedgerEntry {
+    /// Length limits from `state/schema/ledger-entry.schema.json`, checked before appending.
+    pub fn validate(&self) -> Result<()> {
+        if self.summary.chars().count() > 280 {
+            bail!("summary longer than 280 characters");
+        }
+        if self.model.as_ref().is_some_and(|m| m.chars().count() > 80) {
+            bail!("model longer than 80 characters");
+        }
+        Ok(())
+    }
 }
 
 // ---------- the state directory ----------
@@ -654,6 +686,75 @@ impl State {
         out.trim_end().to_string() + "\n"
     }
 
+    /// Render a usage summary (Markdown) of the ledger entries at or after `since`: runs per
+    /// outcome, per model and per usage estimate, plus rate-limit hits next to the budget's
+    /// upgrade trigger. Ledger entries whose `ts` does not parse are ignored.
+    pub fn usage_summary(&self, ledger: &[LedgerEntry], since: DateTime<FixedOffset>) -> String {
+        let recent: Vec<&LedgerEntry> = ledger
+            .iter()
+            .filter(|e| {
+                DateTime::<FixedOffset>::parse_from_rfc3339(&e.ts).is_ok_and(|t| t >= since)
+            })
+            .collect();
+        // BTreeMap keeps the output order stable for diffs and tests.
+        fn tally<K: Ord>(keys: impl Iterator<Item = K>) -> BTreeMap<K, usize> {
+            let mut m = BTreeMap::new();
+            for k in keys {
+                *m.entry(k).or_insert(0) += 1;
+            }
+            m
+        }
+        let fmt = |m: BTreeMap<String, usize>| -> String {
+            if m.is_empty() {
+                "_none_".to_string()
+            } else {
+                m.iter()
+                    .map(|(k, n)| format!("{k} {n}"))
+                    .collect::<Vec<_>>()
+                    .join(" · ")
+            }
+        };
+        let to_name = |v: serde_json::Value| v.as_str().unwrap_or("?").to_string();
+        let outcomes = tally(
+            recent
+                .iter()
+                .map(|e| to_name(serde_json::to_value(e.outcome).unwrap_or_default())),
+        );
+        let models = tally(
+            recent
+                .iter()
+                .map(|e| e.model.clone().unwrap_or_else(|| "unrecorded".to_string())),
+        );
+        let estimates = tally(recent.iter().map(|e| match e.usage_estimate {
+            Some(u) => to_name(serde_json::to_value(u).unwrap_or_default()),
+            None => "unrecorded".to_string(),
+        }));
+        let limited = recent
+            .iter()
+            .filter(|e| e.outcome == Outcome::RateLimited)
+            .count();
+        let b = &self.workspace.budget;
+        let mut out = format!(
+            "### 📊 Usage since {}\n",
+            since.format("%Y-%m-%d %H:%M %:z")
+        );
+        out.push_str(&format!(
+            "- runs: {} · plan `{}`, max {} runs/day\n",
+            recent.len(),
+            b.plan,
+            b.max_runs_per_day
+        ));
+        out.push_str(&format!("- outcomes: {}\n", fmt(outcomes)));
+        out.push_str(&format!("- models: {}\n", fmt(models)));
+        out.push_str(&format!("- usage estimate: {}\n", fmt(estimates)));
+        out.push_str(&format!("- rate_limited: {limited}"));
+        if let Some(t) = &b.upgrade_trigger {
+            out.push_str(&format!(" · upgrade trigger: _{t}_"));
+        }
+        out.push('\n');
+        out
+    }
+
     /// Counts per status, for `minbit status`.
     pub fn summary(&self) -> Vec<(Status, usize)> {
         let order = [
@@ -706,6 +807,24 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
         .unwrap();
         let state = State::load(&dir).unwrap();
         (tmp, state)
+    }
+
+    #[test]
+    fn ledger_entry_validate_enforces_schema_lengths() {
+        let entry = |summary: &str, model: Option<String>| LedgerEntry {
+            ts: "2026-11-20T14:00:00+00:00".into(),
+            task: "MB-007".into(),
+            session: None,
+            outcome: Outcome::Done,
+            summary: summary.into(),
+            pr: None,
+            model,
+            usage_estimate: None,
+        };
+        assert!(entry("ok", None).validate().is_ok());
+        assert!(entry("ok", Some("m".repeat(80))).validate().is_ok());
+        assert!(entry("ok", Some("m".repeat(81))).validate().is_err());
+        assert!(entry(&"s".repeat(281), None).validate().is_err());
     }
 
     #[test]
@@ -909,6 +1028,8 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
             outcome: Outcome::PrOpened,
             summary: "opened PR".into(),
             pr: Some("https://example.invalid/pr/1".into()),
+            model: Some("claude-opus-5-5".into()),
+            usage_estimate: Some(UsageEstimate::Medium),
         };
         let path = s.append_ledger(&entry).unwrap();
         s.append_ledger(&entry).unwrap();
@@ -916,6 +1037,89 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
         assert_eq!(content.lines().count(), 2);
         let parsed: LedgerEntry = serde_json::from_str(content.lines().next().unwrap()).unwrap();
         assert_eq!(parsed.outcome, Outcome::PrOpened);
+        assert_eq!(parsed.model.as_deref(), Some("claude-opus-5-5"));
+        assert_eq!(parsed.usage_estimate, Some(UsageEstimate::Medium));
+        assert!(
+            content.contains(r#""usage_estimate":"medium""#),
+            "{content}"
+        );
+    }
+
+    #[test]
+    fn old_ledger_lines_without_usage_fields_still_parse() {
+        let e: LedgerEntry = serde_json::from_str(
+            r#"{"ts":"2026-11-01T00:00:00+00:00","task":"A","outcome":"done","summary":"x"}"#,
+        )
+        .unwrap();
+        assert!(e.model.is_none() && e.usage_estimate.is_none());
+        let out = serde_json::to_string(&e).unwrap();
+        assert!(
+            !out.contains("model") && !out.contains("usage_estimate"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn usage_summary_counts_by_outcome_model_and_estimate() {
+        let (_tmp, s) = fixture();
+        let mk = |ts: &str, outcome, model: Option<&str>, u| LedgerEntry {
+            ts: ts.into(),
+            task: "T".into(),
+            session: None,
+            outcome,
+            summary: "x".into(),
+            pr: None,
+            model: model.map(Into::into),
+            usage_estimate: u,
+        };
+        let ledger = vec![
+            mk(
+                "2026-11-01T00:00:00+00:00",
+                Outcome::Done,
+                Some("old"),
+                None,
+            ),
+            mk(
+                "2026-11-18T09:00:00+00:00",
+                Outcome::PrOpened,
+                Some("claude-opus-5-5"),
+                Some(UsageEstimate::High),
+            ),
+            mk(
+                "2026-11-19T09:00:00+00:00",
+                Outcome::RateLimited,
+                Some("claude-opus-5-5"),
+                Some(UsageEstimate::Low),
+            ),
+            mk("2026-11-19T11:00:00+00:00", Outcome::Skipped, None, None),
+            mk("garbage", Outcome::Done, Some("bad"), None),
+        ];
+        let since = DateTime::parse_from_rfc3339("2026-11-13T12:00:00+00:00").unwrap();
+        let md = s.usage_summary(&ledger, since);
+        assert!(md.contains("- runs: 3 ·"), "{md}");
+        assert!(
+            md.contains("- outcomes: pr_opened 1 · rate_limited 1 · skipped 1"),
+            "{md}"
+        );
+        assert!(
+            md.contains("- models: claude-opus-5-5 2 · unrecorded 1"),
+            "{md}"
+        );
+        assert!(
+            md.contains("- usage estimate: high 1 · low 1 · unrecorded 1"),
+            "{md}"
+        );
+        assert!(md.contains("- rate_limited: 1"), "{md}");
+        assert!(!md.contains("old") && !md.contains("bad"), "{md}");
+    }
+
+    #[test]
+    fn usage_summary_empty_window() {
+        let (_tmp, s) = fixture();
+        let since = DateTime::parse_from_rfc3339("2026-11-13T12:00:00+00:00").unwrap();
+        let md = s.usage_summary(&[], since);
+        assert!(md.contains("- runs: 0 ·"), "{md}");
+        assert!(md.contains("- models: _none_"), "{md}");
     }
 
     #[test]
@@ -945,6 +1149,8 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
             outcome,
             summary: format!("{task} summary"),
             pr: None,
+            model: None,
+            usage_estimate: None,
         };
         let ledger = vec![
             mk("2026-11-15T10:00:00+00:00", "OLD", Outcome::Done),

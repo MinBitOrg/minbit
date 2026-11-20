@@ -11,6 +11,8 @@
     "session": { "type": "string" },
     "outcome": { "enum": ["pr_opened", "done", "failed", "blocked", "skipped", "rate_limited"] },
     "summary": { "type": "string", "maxLength": 280 },
-    "pr": { "type": "string" }
+    "pr": { "type": "string" },
+    "model": { "type": "string", "maxLength": 80 },
+    "usage_estimate": { "enum": ["low", "medium", "high"] }
   }
 }
