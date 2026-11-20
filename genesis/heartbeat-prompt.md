@@ -10,6 +10,11 @@ You are a MinBit heartbeat run. Work on repository `MinBitOrg/minbit`.
 1. Read `CLAUDE.md` and follow section 1 (Orientation). If the workspace is `paused` or `stopped`,
    append a `skipped` ledger entry and stop.
 2. Housekeeping first (max 10 minutes):
+   - Reconcile task state with PRs:
+     `gh api 'repos/MinBitOrg/minbit/pulls?state=all&per_page=100' --paginate | minbit reconcile`
+     (merged → `done`, closed unmerged → `queued`). Commit any `state/tasks.yaml` change on your
+     task branch. If it prints `until-done complete; workspace stopped`, also commit
+     `state/workspace.yaml` and follow the exit-4 procedure in step 3. Do not run the planner.
    - For open PRs from agents with failing CI or review comments: fix them (one PR per run, oldest first).
    - For PRs labeled `needs-human:*` with a maintainer comment: act on the comment.
 3. Otherwise run `minbit next`. If it returns a task, claim it and execute it with the role it names.

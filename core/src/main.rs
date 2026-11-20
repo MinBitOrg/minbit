@@ -1,7 +1,8 @@
 use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Duration, Local};
 use clap::{Parser, Subcommand, ValueEnum};
-use minbit::{find_state_dir, now, LedgerEntry, Mode, Outcome, State, Status};
+use minbit::{find_state_dir, now, parse_prs, LedgerEntry, Mode, Outcome, State, Status};
+use std::io::Read;
 use std::path::PathBuf;
 
 /// MinBit Workspace CLI — read and change the workspace's world model.
@@ -81,6 +82,16 @@ enum Cmd {
     },
     /// Check the state files for structural problems (exit code 1 if any)
     Validate,
+    /// Sync in_review tasks with their PRs: merged → done, closed unmerged → queued.
+    /// Reads PR JSON from `gh api 'repos/{owner}/{repo}/pulls?state=all' --paginate`
+    Reconcile {
+        /// File with the PR JSON ("-" for stdin)
+        #[arg(long, default_value = "-")]
+        prs: String,
+        /// Print the changes without writing state
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -275,6 +286,31 @@ fn main() -> Result<()> {
             };
             let ledger = state.read_ledger()?;
             print!("{}", state.digest(&ledger, since));
+        }
+        Cmd::Reconcile { prs, dry_run } => {
+            let json = if prs == "-" {
+                let mut s = String::new();
+                std::io::stdin()
+                    .read_to_string(&mut s)
+                    .context("reading PR JSON from stdin")?;
+                s
+            } else {
+                std::fs::read_to_string(&prs).with_context(|| format!("reading {prs}"))?
+            };
+            let changes = state.reconcile(&parse_prs(&json)?);
+            for c in &changes {
+                println!("{} → {:?} ({})", c.task, c.to, c.pr);
+            }
+            if changes.is_empty() {
+                println!("nothing to reconcile");
+            }
+            if !dry_run && !changes.is_empty() {
+                let stopped = state.stop_if_until_done_complete();
+                state.save()?;
+                if stopped {
+                    println!("until-done complete; workspace stopped");
+                }
+            }
         }
         Cmd::Validate => {
             let problems = state.validate();

@@ -2,7 +2,7 @@ tasks:
 - id: MB-001
   title: Make CI green on main (rust, portal, state jobs) and document required checks
   role: builder
-  status: in_review
+  status: done
   priority: 1
   milestone: mvp-genesis
   depends_on: []
@@ -12,7 +12,7 @@ tasks:
 - id: MB-002
   title: 'minbit validate: detect dependency cycles and run JSON Schema validation of state/ in CI'
   role: builder
-  status: in_review
+  status: done
   priority: 1
   milestone: mvp-genesis
   depends_on: []
@@ -22,7 +22,7 @@ tasks:
 - id: MB-003
   title: 'minbit digest: render the daily digest (markdown) from tasks + ledger'
   role: builder
-  status: in_review
+  status: done
   priority: 2
   milestone: mvp-genesis
   depends_on: []
@@ -44,7 +44,7 @@ tasks:
 - id: MB-005
   title: 'Reviewer role v1: checklist, review 3 agent PRs, propose prompt improvements'
   role: reviewer
-  status: in_review
+  status: done
   priority: 2
   milestone: mvp-genesis
   depends_on: []
@@ -75,7 +75,7 @@ tasks:
 - id: MB-008
   title: 'Lifecycle: until-done mode stops itself when all milestone tasks are done'
   role: builder
-  status: in_review
+  status: done
   priority: 2
   milestone: mvp-genesis
   depends_on: []
@@ -94,7 +94,7 @@ tasks:
 - id: MB-010
   title: 'Research: shortlist 10 open-source projects worth a Rust rewrite, with licence check (read-only report)'
   role: researcher
-  status: in_review
+  status: done
   priority: 3
   milestone: mvp-genesis
   depends_on: []
@@ -113,11 +113,13 @@ tasks:
 - id: MB-013
   title: 'Heartbeat reconcile: move in_review tasks to done when their PR merged, back to queued when closed unmerged'
   role: builder
-  status: queued
+  status: in_review
   priority: 1
   milestone: mvp-genesis
   depends_on: []
   labels: []
+  claimed_by: https://claude.ai/code/session_01HiwMvoyDr8RhE7esRXvQKe
+  pr: https://github.com/MinBitOrg/minbit/pull/28
 - id: MB-014
   title: 'Heartbeat effective queue: skip tasks that already have an open agent PR'
   role: builder
