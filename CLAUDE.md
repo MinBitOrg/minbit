@@ -16,8 +16,8 @@ start of every session. It overrides your defaults; the maintainer's explicit in
 1. **Claim**: `cargo run -q -- claim <task-id> --session <session-url-or-id>` (sets `in_progress`).
 2. **Branch**: `agent/<task-id>-<short-slug>`. Never commit to `main`.
 3. **Work** in small, reviewable commits (Conventional Commits: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`).
-4. **Verify** locally: `cargo fmt --check && cargo clippy -- -D warnings && cargo test` in `core/`;
-   `npm ci && npm test` in `portal/` when you touched it.
+4. **Verify** locally: `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` in `core/`;
+   `npm ci && npm test && npm run build` in `portal/` when you touched it. Required checks: [docs/ci.md](docs/ci.md).
 5. **PR** using the template; link the task id; fill the escalation checklist honestly.
 6. **Record**: `cargo run -q -- ledger --task <id> --outcome <pr_opened|done|failed|blocked> --summary "<one line>"`
    and commit the ledger update on the same branch.
