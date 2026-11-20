@@ -301,10 +301,7 @@ fn main() -> Result<()> {
             model,
             usage_estimate,
         } => {
-            if summary.chars().count() > 280 {
-                bail!("summary longer than 280 characters");
-            }
-            let path = state.append_ledger(&LedgerEntry {
+            let entry = LedgerEntry {
                 ts: now(),
                 task,
                 session,
@@ -313,7 +310,9 @@ fn main() -> Result<()> {
                 pr,
                 model,
                 usage_estimate: usage_estimate.map(Into::into),
-            })?;
+            };
+            entry.validate()?;
+            let path = state.append_ledger(&entry)?;
             println!("ledger += {}", path.display());
         }
         Cmd::Digest { since } => {

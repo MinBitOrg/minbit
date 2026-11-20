@@ -164,6 +164,19 @@ pub struct LedgerEntry {
     pub usage_estimate: Option<UsageEstimate>,
 }
 
+impl LedgerEntry {
+    /// Length limits from `state/schema/ledger-entry.schema.json`, checked before appending.
+    pub fn validate(&self) -> Result<()> {
+        if self.summary.chars().count() > 280 {
+            bail!("summary longer than 280 characters");
+        }
+        if self.model.as_ref().is_some_and(|m| m.chars().count() > 80) {
+            bail!("model longer than 80 characters");
+        }
+        Ok(())
+    }
+}
+
 // ---------- the state directory ----------
 
 pub struct State {
@@ -794,6 +807,24 @@ guardrails: { auto_merge: true, releases_allowed: false, escalation_labels: ["ne
         .unwrap();
         let state = State::load(&dir).unwrap();
         (tmp, state)
+    }
+
+    #[test]
+    fn ledger_entry_validate_enforces_schema_lengths() {
+        let entry = |summary: &str, model: Option<String>| LedgerEntry {
+            ts: "2026-11-20T14:00:00+00:00".into(),
+            task: "MB-007".into(),
+            session: None,
+            outcome: Outcome::Done,
+            summary: summary.into(),
+            pr: None,
+            model,
+            usage_estimate: None,
+        };
+        assert!(entry("ok", None).validate().is_ok());
+        assert!(entry("ok", Some("m".repeat(80))).validate().is_ok());
+        assert!(entry("ok", Some("m".repeat(81))).validate().is_err());
+        assert!(entry(&"s".repeat(281), None).validate().is_err());
     }
 
     #[test]
